@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { getStudentStampbookAction, StudentStampbookData } from "./actions";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase/client";
 
 export function StudentStampbookClientPage() {
   const searchParams = useSearchParams();
@@ -131,17 +132,61 @@ export function StudentStampbookClientPage() {
     }
   }, [codeParam, eventIdParam, studentIdParam]);
 
-  // Poll stampbook data every 5 seconds
+  // Realtime Supabase WebSockets + Page Visibility API + Smart Polling (30s fallback)
   useEffect(() => {
     if (!eventId || !studentId) return;
 
+    // Initial fetch
     fetchStampbookData(eventId, studentId, stampbook === null);
 
-    const interval = setInterval(() => {
-      fetchStampbookData(eventId, studentId, false);
-    }, 5000);
+    // 1. Direct Supabase WebSocket subscription (Instant update without Vercel serverless invocations)
+    const channel = supabase
+      .channel(`stampbook-${studentId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "participations",
+          filter: `student_id=eq.${studentId}`,
+        },
+        () => {
+          fetchStampbookData(eventId, studentId, false);
+        }
+      )
+      .subscribe();
 
-    return () => clearInterval(interval);
+    // 2. Page Visibility API + Fallback Polling (Only runs when screen is active/visible)
+    let interval: NodeJS.Timeout | null = null;
+
+    const startPolling = () => {
+      if (interval) clearInterval(interval);
+      interval = setInterval(() => {
+        if (!document.hidden) {
+          fetchStampbookData(eventId, studentId, false);
+        }
+      }, 30000); // 30s conservative fallback (saves 85%+ serverless function calls)
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab is hidden or phone screen is off -> Stop all polling!
+        if (interval) clearInterval(interval);
+      } else {
+        // Tab is active again -> Fetch immediately and restart interval
+        fetchStampbookData(eventId, studentId, false);
+        startPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (interval) clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [eventId, studentId, fetchStampbookData, stampbook]);
 
   // Handle manual code entry submit

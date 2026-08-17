@@ -22,6 +22,8 @@ import { useState, useEffect, useTransition } from "react";
 import { logoutAction } from "@/app/login/actions";
 import { supabase } from "@/lib/supabase/client";
 
+import { getCachedSettings, setCachedSettings } from "@/lib/cache";
+
 interface SidebarProps {
   onClose?: () => void;
 }
@@ -40,11 +42,19 @@ const navItems = [
 export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
-  const [schoolName, setSchoolName] = useState("EduFair Admin");
-  const [schoolLogo, setSchoolLogo] = useState("");
+  const cached = getCachedSettings();
+  const [schoolName, setSchoolName] = useState(cached ? cached.schoolName : "EduFair Admin");
+  const [schoolLogo, setSchoolLogo] = useState(cached ? cached.schoolLogo : "");
 
   useEffect(() => {
     async function loadSettings() {
+      const existing = getCachedSettings();
+      if (existing) {
+        setSchoolName(existing.schoolName);
+        setSchoolLogo(existing.schoolLogo);
+        return;
+      }
+
       try {
         const { data } = await supabase
           .from("settings")
@@ -52,8 +62,11 @@ export function Sidebar({ onClose }: SidebarProps) {
         if (data) {
           const nameRow = data.find((r) => r.key === "school_name");
           const logoRow = data.find((r) => r.key === "school_logo");
-          if (nameRow) setSchoolName(nameRow.value);
-          if (logoRow) setSchoolLogo(logoRow.value);
+          const name = nameRow?.value || "EduFair Admin";
+          const logo = logoRow?.value || "";
+          setSchoolName(name);
+          setSchoolLogo(logo);
+          setCachedSettings({ schoolName: name, schoolLogo: logo });
         }
       } catch (err) {
         console.error(err);

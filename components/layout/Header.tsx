@@ -8,17 +8,27 @@ import { useTransition } from "react";
 import { logoutAction } from "@/app/login/actions";
 import { supabase } from "@/lib/supabase/client";
 
+import { getCachedUser, setCachedUser, clearClientCache } from "@/lib/cache";
+
 interface HeaderProps {
   onMenuClick?: () => void;
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
   const [isPending, startTransition] = useTransition();
-  const [userName, setUserName] = useState("교사");
-  const [role, setRole] = useState("부스 운영교사");
+  const cached = getCachedUser();
+  const [userName, setUserName] = useState(cached ? cached.userName : "교사");
+  const [role, setRole] = useState(cached ? cached.role : "부스 운영교사");
 
   useEffect(() => {
     async function loadUser() {
+      const existing = getCachedUser();
+      if (existing) {
+        setUserName(existing.userName);
+        setRole(existing.role);
+        return;
+      }
+
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -27,13 +37,15 @@ export function Header({ onMenuClick }: HeaderProps) {
             .select("name, role")
             .eq("id", user.id)
             .single();
-          if (teacher) {
-            setUserName(teacher.name);
-            setRole(teacher.role === "admin" ? "관리자" : "부스 운영교사");
-          } else {
-            setUserName(user.email || "교사");
-            setRole(user.user_metadata?.role === "admin" ? "관리자" : "부스 운영교사");
-          }
+
+          const resolvedName = teacher ? teacher.name : (user.email || "교사");
+          const resolvedRole = (teacher?.role === "admin" || user.user_metadata?.role === "admin")
+            ? "관리자"
+            : "부스 운영교사";
+
+          setUserName(resolvedName);
+          setRole(resolvedRole);
+          setCachedUser({ userName: resolvedName, role: resolvedRole });
         }
       } catch (err) {
         console.error(err);

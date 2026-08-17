@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { getAdminDashboardDataAction, DashboardData } from "./dashboard-actions";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase/client";
 
 interface EventOption {
   id: string;
@@ -71,17 +72,59 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
     }
   }, []);
 
-  // Poll dashboard data every 3 seconds
+  // Realtime Supabase WebSockets + Page Visibility API + Fallback Polling (20s)
   useEffect(() => {
     if (!selectedEventId) return;
 
+    // Initial fetch
     fetchDashboardData(selectedEventId, dashboardData === null);
 
-    const interval = setInterval(() => {
-      fetchDashboardData(selectedEventId, false);
-    }, 3000);
+    // 1. Direct Supabase WebSocket subscription (Instant update on participation events)
+    const channel = supabase
+      .channel(`dashboard-live-${selectedEventId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "participations",
+          filter: `event_id=eq.${selectedEventId}`,
+        },
+        () => {
+          fetchDashboardData(selectedEventId, false);
+        }
+      )
+      .subscribe();
 
-    return () => clearInterval(interval);
+    // 2. Page Visibility API + Smart Fallback Polling
+    let interval: NodeJS.Timeout | null = null;
+
+    const startPolling = () => {
+      if (interval) clearInterval(interval);
+      interval = setInterval(() => {
+        if (!document.hidden) {
+          fetchDashboardData(selectedEventId, false);
+        }
+      }, 20000); // 20s conservative fallback (saves 85%+ server invocations)
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (interval) clearInterval(interval);
+      } else {
+        fetchDashboardData(selectedEventId, false);
+        startPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (interval) clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [selectedEventId, fetchDashboardData, dashboardData]);
 
   // Handle Event selection change

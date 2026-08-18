@@ -76,6 +76,40 @@ interface StudentClientPageProps {
   initialEvents: EventOption[];
 }
 
+function StudentQrThumbnail({ code, onClick }: { code: string; onClick: () => void }) {
+  const [dataUrl, setDataUrl] = useState<string>("");
+
+  useEffect(() => {
+    QRCode.toDataURL(code, { width: 64, margin: 0 })
+      .then((url) => setDataUrl(url))
+      .catch(() => {});
+  }, [code]);
+
+  return (
+    <div
+      onClick={onClick}
+      className="inline-flex items-center gap-2.5 cursor-pointer group"
+      title="클릭하여 QR 확대 및 인쇄"
+    >
+      <div className="w-10 h-10 bg-white p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 group-hover:border-cyan-400 dark:group-hover:border-[#00E5FF] transition-all flex items-center justify-center shadow-xs flex-shrink-0">
+        {dataUrl ? (
+          <img src={dataUrl} alt="Student QR" className="w-9 h-9" />
+        ) : (
+          <div className="w-9 h-9 bg-slate-100 dark:bg-slate-800 animate-pulse rounded" />
+        )}
+      </div>
+      <Button
+        variant="ghost"
+        size="xs"
+        className="text-[#00E5FF] group-hover:bg-cyan-950/30 group-hover:text-[#00D0EB] border border-[#00E5FF]/20 px-2 rounded-full text-xs font-medium gap-1 h-7 pointer-events-none"
+      >
+        <QrCode className="h-3 w-3" />
+        <span>QR 확대</span>
+      </Button>
+    </div>
+  );
+}
+
 export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [selectedClass, setSelectedClass] = useState<string>("ALL");
@@ -146,13 +180,24 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
 
   // Helper: Extract class label (e.g. "1학년 2반") from student_number
   const getClassLabel = (studentNumber: string) => {
-    const match = studentNumber.match(/(\d+)\s*학년\s*(\d+)\s*반/);
-    if (match) {
-      return `${match[1]}학년 ${match[2]}반`;
+    if (!studentNumber) return "기타";
+    const koreanMatch = studentNumber.match(/(\d+)\s*학년\s*(\d+)\s*반/);
+    if (koreanMatch) {
+      return `${koreanMatch[1]}학년 ${koreanMatch[2]}반`;
     }
     const dashMatch = studentNumber.match(/^(\d+)[-_](\d+)[-_](\d+)$/);
     if (dashMatch) {
-      return `${dashMatch[1]}학년 ${dashMatch[2]}반`;
+      return `${parseInt(dashMatch[1])}학년 ${parseInt(dashMatch[2])}반`;
+    }
+    if (/^\d{5}$/.test(studentNumber)) {
+      const g = parseInt(studentNumber[0]);
+      const c = parseInt(studentNumber.substring(1, 3));
+      return `${g}학년 ${c}반`;
+    }
+    if (/^\d{4}$/.test(studentNumber)) {
+      const g = parseInt(studentNumber[0]);
+      const c = parseInt(studentNumber[1]);
+      return `${g}학년 ${c}반`;
     }
     return "기타 학급";
   };
@@ -224,6 +269,20 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     }
     setFormName(student.name);
     setErrorMessage(null);
+  };
+
+  // Handle Delete
+  const handleDelete = (id: string) => {
+    if (!confirm("정말 이 학생을 삭제하시겠습니까? 학생의 모든 참여 이력 및 대장 기록이 유실될 수 있습니다.")) return;
+
+    startTransition(async () => {
+      const res = await deleteStudentAction(id);
+      if (res.error) {
+        alert(`삭제 실패: ${res.error}`);
+      } else {
+        loadStudents(selectedEventId);
+      }
+    });
   };
 
   // Format Helper
@@ -815,15 +874,10 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
                         {student.name}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="xs"
+                        <StudentQrThumbnail
+                          code={student.qr_code}
                           onClick={() => setViewingQrStudent(student)}
-                          className="text-[#00E5FF] hover:bg-cyan-950/20 hover:text-[#00D0EB] border border-[#00E5FF]/20 px-2.5 rounded-full text-xs font-medium gap-1.5"
-                        >
-                          <QrCode className="h-3.5 w-3.5" />
-                          <span>QR 보기</span>
-                        </Button>
+                        />
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>

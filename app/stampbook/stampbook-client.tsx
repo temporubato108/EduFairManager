@@ -35,10 +35,22 @@ export function StudentStampbookClientPage() {
   let initialEventId = eventIdParam || "";
   let initialStudentId = studentIdParam || "";
 
-  if (codeParam && codeParam.includes(":")) {
-    const [splitEId, splitSId] = codeParam.split(":");
-    initialEventId = splitEId;
-    initialStudentId = splitSId;
+  if (codeParam) {
+    let cleanCode = codeParam.trim();
+    if (cleanCode.includes("code=")) {
+      try {
+        const url = new URL(cleanCode, "https://placeholder.local");
+        cleanCode = url.searchParams.get("code") || cleanCode;
+      } catch {
+        const match = cleanCode.match(/[?&]code=([^&]+)/);
+        if (match) cleanCode = decodeURIComponent(match[1]);
+      }
+    }
+    if (cleanCode.includes(":")) {
+      const [splitEId, splitSId] = cleanCode.split(":");
+      initialEventId = splitEId;
+      initialStudentId = splitSId;
+    }
   }
 
   const [eventId, setEventId] = useState(initialEventId);

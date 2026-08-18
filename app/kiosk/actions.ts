@@ -26,8 +26,20 @@ export async function recordParticipationAction(
     return { error: "필수 파라미터가 누락되었습니다." };
   }
 
-  // 1. Parse QR content. Format must be eventId:studentId
-  const parts = qrCodeContent.split(":");
+  // 1. Parse QR content. Support full URL (https://.../stampbook?code=eventId:studentId) and raw eventId:studentId
+  let cleanCode = qrCodeContent.trim();
+  if (cleanCode.includes("code=")) {
+    try {
+      const url = new URL(cleanCode, "https://placeholder.local");
+      const extracted = url.searchParams.get("code");
+      if (extracted) cleanCode = extracted;
+    } catch {
+      const match = cleanCode.match(/[?&]code=([^&]+)/);
+      if (match) cleanCode = decodeURIComponent(match[1]);
+    }
+  }
+
+  const parts = cleanCode.split(":");
   if (parts.length !== 2) {
     return { error: "유효하지 않은 QR 코드 형식입니다." };
   }

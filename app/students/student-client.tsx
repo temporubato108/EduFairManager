@@ -76,11 +76,18 @@ interface StudentClientPageProps {
   initialEvents: EventOption[];
 }
 
+const getStudentStampbookUrl = (qrCode: string) => {
+  const origin = typeof window !== "undefined" && window.location.origin
+    ? window.location.origin
+    : "https://edufair.vercel.app";
+  return `${origin}/stampbook?code=${qrCode}`;
+};
+
 function StudentQrThumbnail({ code, onClick }: { code: string; onClick: () => void }) {
   const [dataUrl, setDataUrl] = useState<string>("");
 
   useEffect(() => {
-    QRCode.toDataURL(code, { width: 64, margin: 0 })
+    QRCode.toDataURL(getStudentStampbookUrl(code), { width: 64, margin: 0 })
       .then((url) => setDataUrl(url))
       .catch(() => {});
   }, [code]);
@@ -163,10 +170,10 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     }
   }, [initialEvents]);
 
-  // Generate QR Code for viewingQrStudent
+  // Generate QR Code for viewingQrStudent (encodes full Stampbook URL)
   useEffect(() => {
     if (viewingQrStudent) {
-      QRCode.toDataURL(viewingQrStudent.qr_code, {
+      QRCode.toDataURL(getStudentStampbookUrl(viewingQrStudent.qr_code), {
         margin: 2,
         width: 320,
       })
@@ -608,8 +615,8 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
         const x = margin + col * cardWidth;
         const y = pageHeight - margin - (row + 1) * cardHeight;
 
-        // Generate QR code data URL locally
-        const qrDataUrl = await QRCode.toDataURL(student.qr_code, {
+        // Generate QR code data URL locally (encodes full Stampbook URL)
+        const qrDataUrl = await QRCode.toDataURL(getStudentStampbookUrl(student.qr_code), {
           margin: 1,
           width: 200,
         });

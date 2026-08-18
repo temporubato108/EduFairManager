@@ -12,7 +12,7 @@ import {
   FileText,
   Settings,
   X,
-  Sparkles,
+  School,
   LogOut,
   Loader2,
 } from "lucide-react";
@@ -84,12 +84,12 @@ export function Sidebar({ onClose }: SidebarProps) {
     <aside className="flex h-full w-64 flex-col border-r border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-950/50">
       {/* Sidebar Header */}
       <div className="flex h-16 items-center justify-between px-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-        <Link href="/" className="flex items-center gap-2" onClick={onClose}>
+        <Link href="/" className="flex items-center gap-2.5" onClick={onClose}>
           {schoolLogo ? (
             <img src={schoolLogo} alt="School Logo" className="h-8 w-8 object-contain rounded-lg" />
           ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white dark:bg-indigo-500">
-              <Sparkles className="h-5 w-5" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-xs">
+              <School className="h-4.5 w-4.5" />
             </div>
           )}
           <span className="font-bold tracking-tight text-slate-800 dark:text-slate-100 truncate max-w-[140px]">

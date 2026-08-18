@@ -39,6 +39,7 @@ export async function middleware(request: NextRequest) {
   const isLoginPage = url.pathname.startsWith("/login");
   const isPublicPage =
     url.pathname.startsWith("/stampbook") ||
+    url.pathname.startsWith("/kiosk") ||
     url.pathname.startsWith("/_next") ||
     url.pathname === "/favicon.ico" ||
     url.pathname.startsWith("/api/public");

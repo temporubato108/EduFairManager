@@ -49,6 +49,8 @@ import {
   Printer,
   Store,
   FileText,
+  Camera,
+  ExternalLink,
 } from "lucide-react";
 import {
   getBoothsAction,
@@ -584,15 +586,27 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
                         )}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => setViewingQrBooth(booth)}
-                          className="text-[#00E5FF] hover:bg-cyan-950/20 hover:text-[#00D0EB] border border-[#00E5FF]/20 px-2.5 rounded-full text-xs font-medium gap-1.5"
-                        >
-                          <QrCode className="h-3.5 w-3.5" />
-                          <span>QR 코드 보기</span>
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => setViewingQrBooth(booth)}
+                            className="text-[#00E5FF] hover:bg-cyan-950/20 hover:text-[#00D0EB] border border-[#00E5FF]/20 px-2.5 rounded-full text-xs font-medium gap-1.5"
+                          >
+                            <QrCode className="h-3.5 w-3.5" />
+                            <span>QR 보기</span>
+                          </Button>
+                          <a
+                            href={`/kiosk?boothId=${booth.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 transition-colors"
+                            title="이 부스의 키오스크 스캐너 바로 열기"
+                          >
+                            <Camera className="h-3 w-3" />
+                            <span>스캐너 열기</span>
+                          </a>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -831,6 +845,17 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
                       : ""}
                   </span>
                 </div>
+
+                {/* Quick open scanner */}
+                <a
+                  href={`/kiosk?boothId=${viewingQrBooth.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-950/20"
+                >
+                  <Camera className="h-4 w-4" />
+                  <span>이 부스 스캐너 바로 열기 (카메라 테스트)</span>
+                </a>
               </div>
             )}
 

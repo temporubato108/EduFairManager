@@ -33,7 +33,6 @@ const navItems = [
   { name: "행사 관리", href: "/events", icon: Calendar },
   { name: "부스 관리", href: "/booths", icon: Store },
   { name: "학생 관리", href: "/students", icon: Users },
-  { name: "QR 스캔 (부스)", href: "/kiosk", icon: QrCode },
   { name: "실시간 통계", href: "/statistics", icon: BarChart3 },
   { name: "로그 기록", href: "/logs", icon: FileText },
   { name: "시스템 설정", href: "/settings", icon: Settings },

@@ -12,6 +12,20 @@ export interface SystemSettings {
   default_allow_double_participation: string;
 }
 
+export function isValidSchoolLogo(logo?: string | null): boolean {
+  if (!logo || typeof logo !== "string") return false;
+  const trimmed = logo.trim().replace(/^["']|["']$/g, "").trim();
+  if (!trimmed || trimmed === "null" || trimmed === "undefined" || trimmed === "{}" || trimmed === "[]") {
+    return false;
+  }
+  return (
+    trimmed.startsWith("data:image/") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("/")
+  );
+}
+
 export async function getSettingsAction(): Promise<SystemSettings> {
   const defaultSettings: SystemSettings = {
     school_name: "미래초등학교",
@@ -33,13 +47,29 @@ export async function getSettingsAction(): Promise<SystemSettings> {
         const k = row.key as keyof SystemSettings;
         if (k in settings) {
           let val = row.value;
-          if (typeof val === "object" && val !== null) {
-            val = JSON.stringify(val);
+          if (typeof val === "string") {
+            try {
+              if ((val.startsWith('"') && val.endsWith('"')) || val.startsWith('{') || val.startsWith('[')) {
+                val = JSON.parse(val);
+              }
+            } catch {
+              // use raw string
+            }
           }
-          settings[k] = String(val || "");
+          const strVal = String(val ?? "").trim();
+          if (strVal === "null" || strVal === "undefined" || strVal === '""' || strVal === "''") {
+            settings[k] = "";
+          } else {
+            settings[k] = strVal;
+          }
         }
       });
     }
+
+    if (!isValidSchoolLogo(settings.school_logo)) {
+      settings.school_logo = "";
+    }
+
     return settings;
   } catch (err) {
     const errorObj = err as Error;
@@ -53,21 +83,17 @@ export async function saveSettingsAction(settings: Partial<SystemSettings>) {
     const supabase = await createClient();
 
     // Prepare upsert payload
-    const payload = Object.entries(settings).map(([key, value]) => ({
-      key,
-      value: JSON.stringify(value || ""),
-    }));
-
-    // Upsert key-value pairs
-    for (const item of payload) {
+    const entries = Object.entries(settings);
+    for (const [key, rawValue] of entries) {
+      const cleanValue = typeof rawValue === "string" ? rawValue.trim() : String(rawValue || "");
       const { error } = await supabase
         .from("settings")
-        .upsert(item, { onConflict: "key" });
+        .upsert({ key, value: cleanValue }, { onConflict: "key" });
       if (error) {
-        // Fallback for text column type
+        // Fallback for jsonb typed column
         await supabase
           .from("settings")
-          .upsert({ key: item.key, value: settings[item.key as keyof SystemSettings] || "" }, { onConflict: "key" });
+          .upsert({ key, value: JSON.stringify(cleanValue) }, { onConflict: "key" });
       }
     }
 

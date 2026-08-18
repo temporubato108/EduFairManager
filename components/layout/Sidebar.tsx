@@ -24,6 +24,8 @@ import { supabase } from "@/lib/supabase/client";
 
 import { getCachedSettings, setCachedSettings } from "@/lib/cache";
 
+import { isValidSchoolLogo } from "@/app/settings/actions";
+
 interface SidebarProps {
   onClose?: () => void;
 }
@@ -43,14 +45,15 @@ export function Sidebar({ onClose }: SidebarProps) {
   const [isPending, startTransition] = useTransition();
   const cached = getCachedSettings();
   const [schoolName, setSchoolName] = useState(cached ? cached.schoolName : "EduFair Admin");
-  const [schoolLogo, setSchoolLogo] = useState(cached ? cached.schoolLogo : "");
+  const [schoolLogo, setSchoolLogo] = useState(cached && isValidSchoolLogo(cached.schoolLogo) ? cached.schoolLogo : "");
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     async function loadSettings() {
       const existing = getCachedSettings();
       if (existing) {
         setSchoolName(existing.schoolName);
-        setSchoolLogo(existing.schoolLogo);
+        setSchoolLogo(isValidSchoolLogo(existing.schoolLogo) ? existing.schoolLogo : "");
         return;
       }
 
@@ -62,10 +65,22 @@ export function Sidebar({ onClose }: SidebarProps) {
           const nameRow = data.find((r) => r.key === "school_name");
           const logoRow = data.find((r) => r.key === "school_logo");
           const name = nameRow?.value || "EduFair Admin";
-          const logo = logoRow?.value || "";
+          
+          let rawLogo = logoRow?.value;
+          if (typeof rawLogo === "string") {
+            try {
+              if ((rawLogo.startsWith('"') && rawLogo.endsWith('"')) || rawLogo.startsWith('{') || rawLogo.startsWith('[')) {
+                rawLogo = JSON.parse(rawLogo);
+              }
+            } catch {
+              // raw
+            }
+          }
+          const validLogo = isValidSchoolLogo(rawLogo) ? String(rawLogo).trim() : "";
+
           setSchoolName(name);
-          setSchoolLogo(logo);
-          setCachedSettings({ schoolName: name, schoolLogo: logo });
+          setSchoolLogo(validLogo);
+          setCachedSettings({ schoolName: name, schoolLogo: validLogo });
         }
       } catch (err) {
         console.error(err);
@@ -80,13 +95,20 @@ export function Sidebar({ onClose }: SidebarProps) {
     });
   };
 
+  const showCustomLogo = !imgError && isValidSchoolLogo(schoolLogo);
+
   return (
     <aside className="flex h-full w-64 flex-col border-r border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-950/50">
       {/* Sidebar Header */}
       <div className="flex h-16 items-center justify-between px-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
         <Link href="/" className="flex items-center gap-2.5" onClick={onClose}>
-          {schoolLogo ? (
-            <img src={schoolLogo} alt="School Logo" className="h-8 w-8 object-contain rounded-lg" />
+          {showCustomLogo ? (
+            <img
+              src={schoolLogo}
+              alt="School Logo"
+              onError={() => setImgError(true)}
+              className="h-8 w-8 object-contain rounded-lg"
+            />
           ) : (
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-xs">
               <School className="h-4.5 w-4.5" />

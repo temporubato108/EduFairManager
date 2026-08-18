@@ -24,7 +24,7 @@ import {
   School,
   QrCode,
 } from "lucide-react";
-import { saveSettingsAction, SystemSettings } from "./actions";
+import { saveSettingsAction, SystemSettings, isValidSchoolLogo } from "./actions";
 
 interface SettingsClientPageProps {
   initialSettings: SystemSettings;
@@ -32,7 +32,8 @@ interface SettingsClientPageProps {
 
 export function SettingsClientPage({ initialSettings }: SettingsClientPageProps) {
   const [schoolName, setSchoolName] = useState(initialSettings.school_name);
-  const [schoolLogo, setSchoolLogo] = useState(initialSettings.school_logo);
+  const [schoolLogo, setSchoolLogo] = useState(isValidSchoolLogo(initialSettings.school_logo) ? initialSettings.school_logo : "");
+  const [imgError, setImgError] = useState(false);
   const [qrSize, setQrSize] = useState(initialSettings.qr_size);
   const [soundEffectsEnabled, setSoundEffectsEnabled] = useState(initialSettings.sound_effects_enabled);
   const [darkModeEnabled, setDarkModeEnabled] = useState(initialSettings.dark_mode_enabled);
@@ -64,6 +65,7 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
     }
 
     setErrorMessage(null);
+    setImgError(false);
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result && typeof event.target.result === "string") {
@@ -75,6 +77,7 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
 
   const handleClearLogo = () => {
     setSchoolLogo("");
+    setImgError(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -173,9 +176,14 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                   {/* Preview avatar */}
                   <div className="h-20 w-20 rounded-2xl border-2 border-dashed border-indigo-200 dark:border-[#00E5FF]/30 bg-indigo-50/50 dark:bg-cyan-950/20 flex flex-col items-center justify-center overflow-hidden flex-shrink-0 relative shadow-sm">
-                    {schoolLogo ? (
+                    {isValidSchoolLogo(schoolLogo) && !imgError ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={schoolLogo} alt="School Logo" className="h-full w-full object-contain p-1.5" />
+                      <img
+                        src={schoolLogo}
+                        alt="School Logo"
+                        onError={() => setImgError(true)}
+                        className="h-full w-full object-contain p-1.5"
+                      />
                     ) : (
                       <div className="flex flex-col items-center justify-center p-1 text-center">
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center shadow-xs mb-1">

@@ -62,8 +62,7 @@ import {
   StudentInput,
 } from "./actions";
 import * as XLSX from "xlsx";
-import { PDFDocument, rgb } from "pdf-lib";
-import { loadKoreanFontBytes, registerFontkitSafe } from "@/lib/font-helper";
+import { PDFDocument } from "pdf-lib";
 import QRCode from "qrcode";
 
 interface EventOption {
@@ -563,147 +562,156 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     XLSX.writeFile(wb, "학생_업로드_양식.xlsx");
   };
 
-  // Advanced PDF Exporter (with Custom TTF Font & 3x4 Grid Layout)
+  // High-Definition Canvas-to-PDF Exporter (3x4 Grid, 12 Cards per A4 Page)
   const handleExportPdf = async () => {
     if (students.length === 0 || !selectedEventId) return;
 
     setPdfBuilding(true);
-    setPdfStatus("한글 나눔고딕 폰트 불러오는 중...");
+    setPdfStatus("PDF 문서 초기화 중...");
 
     try {
-      const fontBytes = await loadKoreanFontBytes();
-
-      setPdfStatus("PDF 문서 초기화 중...");
       const pdfDoc = await PDFDocument.create();
-      registerFontkitSafe(pdfDoc);
-      const customFont = await pdfDoc.embedFont(fontBytes);
-
-      // A4 dimensions: 595.28 x 841.89 points
       const pageWidth = 595.28;
       const pageHeight = 841.89;
-      const margin = 20;
 
-      // 3 Columns x 4 Rows Grid (12 Cards per page)
+      // Canvas dimensions (2x scale for 300 DPI high-definition print)
+      const canvasWidth = 1240;
+      const canvasHeight = 1754;
+      const margin = 40;
       const cols = 3;
       const rows = 4;
-      const cardWidth = (pageWidth - margin * 2) / cols; // ~ 185pt
-      const cardHeight = (pageHeight - margin * 2) / rows; // ~ 200pt
-      const qrSize = 90;
+      const cardWidth = (canvasWidth - margin * 2) / cols;
+      const cardHeight = (canvasHeight - margin * 2) / rows;
+      const itemsPerPage = cols * rows; // 12
+      const totalPages = Math.ceil(students.length / itemsPerPage);
 
-      let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      const activeEvent = initialEvents.find((e) => e.id === selectedEventId);
+      const activeEventName = activeEvent?.name || "행사";
+      const cleanEventName = activeEvent ? activeEvent.name.replace(/\s+/g, "_") : "event";
 
-      for (let i = 0; i < students.length; i++) {
-        const student = students[i];
-        const pageIdx = Math.floor(i / 12);
-        const cardIdx = i % 12;
+      // Offscreen Canvas
+      const canvas = document.createElement("canvas");
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("캔버스 렌더러를 초기화할 수 없습니다.");
 
-        // Add a new page if we exceed 12 cards on the current page
-        if (i > 0 && cardIdx === 0) {
-          setPdfStatus(`새 페이지 생성 중... (${pageIdx + 1}페이지)`);
-          currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      // Helper to load image
+      const loadImage = (src: string): Promise<HTMLImageElement> => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+      };
+
+      for (let p = 0; p < totalPages; p++) {
+        setPdfStatus(`학생 명찰 페이지 렌더링 중 (${p + 1}/${totalPages} 페이지)...`);
+
+        // Clear canvas
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        const pageStudents = students.slice(p * itemsPerPage, (p + 1) * itemsPerPage);
+
+        for (let i = 0; i < pageStudents.length; i++) {
+          const student = pageStudents[i];
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+
+          const x = margin + col * cardWidth;
+          const y = margin + row * cardHeight;
+          const padding = 10;
+          const innerX = x + padding;
+          const innerY = y + padding;
+          const innerW = cardWidth - padding * 2;
+          const innerH = cardHeight - padding * 2;
+
+          // 1. Draw outer dotted cut-guide line
+          ctx.strokeStyle = "#cbd5e1";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          ctx.strokeRect(x, y, cardWidth, cardHeight);
+          ctx.setLineDash([]); // Reset dash
+
+          // 2. Draw card solid border & soft background
+          ctx.fillStyle = "#f8fafc";
+          ctx.fillRect(innerX, innerY, innerW, innerH);
+          ctx.strokeStyle = "#e2e8f0";
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(innerX, innerY, innerW, innerH);
+
+          // 3. Event Name (top small text)
+          ctx.fillStyle = "#64748b";
+          ctx.font = "bold 15px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.textAlign = "left";
+          const trimmedEvent = activeEventName.length > 18 ? activeEventName.substring(0, 18) + "..." : activeEventName;
+          ctx.fillText(trimmedEvent, innerX + 16, innerY + 28);
+
+          // 4. Student Name (Large Bold)
+          ctx.fillStyle = "#0f172a";
+          ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.fillText(student.name, innerX + 16, innerY + 64);
+
+          // 5. Student Number (e.g. 1학년 2반 3번)
+          ctx.fillStyle = "#475569";
+          ctx.font = "bold 16px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.fillText(student.student_number, innerX + 16, innerY + 92);
+
+          // 6. Generate and draw QR Code
+          const qrDataUrl = await QRCode.toDataURL(getStudentStampbookUrl(student.qr_code), {
+            margin: 1,
+            width: 320,
+          });
+          const qrImg = await loadImage(qrDataUrl);
+          const qrDisplaySize = 190;
+          const qrX = innerX + (innerW - qrDisplaySize) / 2;
+          const qrY = innerY + 115;
+
+          // QR Code container box
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(qrX - 4, qrY - 4, qrDisplaySize + 8, qrDisplaySize + 8);
+          ctx.strokeStyle = "#e2e8f0";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(qrX - 4, qrY - 4, qrDisplaySize + 8, qrDisplaySize + 8);
+
+          ctx.drawImage(qrImg, qrX, qrY, qrDisplaySize, qrDisplaySize);
+
+          // 7. Footer text ("EduFair 참여 QR")
+          ctx.fillStyle = "#94a3b8";
+          ctx.font = "13px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.textAlign = "right";
+          ctx.fillText("EduFair 참여 QR", innerX + innerW - 14, innerY + innerH - 12);
         }
 
-        const col = cardIdx % cols;
-        const row = Math.floor(cardIdx / cols);
+        // Export current canvas page to JPEG
+        const pageJpgDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        const pageJpgBytes = Uint8Array.from(atob(pageJpgDataUrl.split(",")[1]), (c) => c.charCodeAt(0));
+        const pdfImage = await pdfDoc.embedJpg(pageJpgBytes);
 
-        // Compute positioning (Origin 0,0 is at bottom-left in pdf-lib)
-        const x = margin + col * cardWidth;
-        const y = pageHeight - margin - (row + 1) * cardHeight;
-
-        // Generate QR code data URL locally (encodes full Stampbook URL)
-        const qrDataUrl = await QRCode.toDataURL(getStudentStampbookUrl(student.qr_code), {
-          margin: 1,
-          width: 200,
-        });
-        const qrBase64 = qrDataUrl.split(",")[1];
-        const qrBytes = Uint8Array.from(atob(qrBase64), (c) => c.charCodeAt(0));
-        const qrImage = await pdfDoc.embedPng(qrBytes);
-
-        setPdfStatus(`학생 QR 카드 그리는 중 (${i + 1}/${students.length})...`);
-
-        // Draw Card Outer boundary
-        currentPage.drawRectangle({
-          x: x + 5,
-          y: y + 5,
-          width: cardWidth - 10,
-          height: cardHeight - 10,
-          borderColor: rgb(0.8, 0.8, 0.8),
-          borderWidth: 1,
-          color: rgb(0.98, 0.98, 0.98),
-        });
-
-        // Draw cut guidance lines
-        currentPage.drawRectangle({
-          x: x,
-          y: y,
-          width: cardWidth,
-          height: cardHeight,
-          borderColor: rgb(0.9, 0.9, 0.9),
-          borderWidth: 0.5,
-        });
-
-        // Draw QR Image
-        currentPage.drawImage(qrImage, {
-          x: x + cardWidth / 2 - qrSize / 2,
-          y: y + 25,
-          width: qrSize,
-          height: qrSize,
-        });
-
-        // Draw Event Name
-        const activeEventName = initialEvents.find((e) => e.id === selectedEventId)?.name || "행사";
-        const trimmedEventName = activeEventName.length > 18 ? activeEventName.substring(0, 18) + "..." : activeEventName;
-        currentPage.drawText(trimmedEventName, {
-          x: x + 15,
-          y: y + cardHeight - 25,
-          size: 7,
-          font: customFont,
-          color: rgb(0.5, 0.5, 0.5),
-        });
-
-        // Draw Student Name
-        currentPage.drawText(student.name, {
-          x: x + 15,
-          y: y + cardHeight - 45,
-          size: 13,
-          font: customFont,
-          color: rgb(0.1, 0.1, 0.1),
-        });
-
-        // Draw Student Number
-        currentPage.drawText(student.student_number, {
-          x: x + 15,
-          y: y + cardHeight - 60,
-          size: 8,
-          font: customFont,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-
-        // Draw compact signature/help text
-        currentPage.drawText("EduFair 참여 QR", {
-          x: x + cardWidth - 75,
-          y: y + 12,
-          size: 6.5,
-          font: customFont,
-          color: rgb(0.6, 0.6, 0.6),
+        const pdfPage = pdfDoc.addPage([pageWidth, pageHeight]);
+        pdfPage.drawImage(pdfImage, {
+          x: 0,
+          y: 0,
+          width: pageWidth,
+          height: pageHeight,
         });
       }
 
-      setPdfStatus("PDF 인코딩 및 빌드 마무리 중...");
+      setPdfStatus("PDF 인코딩 및 파일 저장 중...");
       const pdfBytes = await pdfDoc.save();
 
-      // Download file to browser
+      // Trigger instant browser download
       const blob = new Blob([pdfBytes as unknown as BlobPart], { type: "application/pdf" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      const activeEvent = initialEvents.find((e) => e.id === selectedEventId);
-      const cleanEventName = activeEvent ? activeEvent.name.replace(/\s+/g, "_") : "event";
       link.download = `students_qr_${cleanEventName}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (err) {
-      console.error(err);
+      console.error("PDF generation error:", err);
       alert("PDF 생성 중 오류가 발생했습니다.");
     } finally {
       setPdfBuilding(false);

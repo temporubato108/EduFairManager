@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { PDFDocument, rgb } from "pdf-lib";
-import { loadKoreanFontBytes, registerFontkitSafe } from "@/lib/font-helper";
+import { PDFDocument } from "pdf-lib";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -305,151 +304,155 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
     printWindow.document.close();
   };
 
-  // Advanced PDF Exporter for Booth Signs
+  // Advanced High-Definition Canvas-to-PDF Exporter for Booth Signs
   const handleExportBoothsPdf = async () => {
     if (booths.length === 0 || !selectedEventId) return;
 
     setPdfBuilding(true);
-    setPdfStatus("한글 나눔고딕 폰트 불러오는 중...");
+    setPdfStatus("PDF 문서 초기화 중...");
 
     try {
-      const fontBytes = await loadKoreanFontBytes();
-
-      setPdfStatus("PDF 문서 초기화 중...");
       const pdfDoc = await PDFDocument.create();
-      registerFontkitSafe(pdfDoc);
-      const customFont = await pdfDoc.embedFont(fontBytes);
-
       const pageWidth = 595.28;
       const pageHeight = 841.89;
 
+      // Canvas dimensions (2x scale for 300 DPI high-definition print)
+      const canvasWidth = 1240;
+      const canvasHeight = 1754;
+
+      const activeEvent = initialEvents.find((e) => e.id === selectedEventId);
+      const activeEventName = activeEvent?.name || "행사";
+      const cleanEventName = activeEvent ? activeEvent.name.replace(/\s+/g, "_") : "event";
+
+      // Offscreen Canvas
+      const canvas = document.createElement("canvas");
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("캔버스 렌더러를 초기화할 수 없습니다.");
+
+      const loadImage = (src: string): Promise<HTMLImageElement> => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+      };
+
       for (let i = 0; i < booths.length; i++) {
         const booth = booths[i];
-        setPdfStatus(`부스 QR 코드 생성 및 페이지 렌더링 중 (${i + 1}/${booths.length})...`);
+        setPdfStatus(`부스 안내판 렌더링 중 (${i + 1}/${booths.length} 부스)...`);
 
-        const page = pdfDoc.addPage([pageWidth, pageHeight]);
+        // 1. Clear background
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
+        // 2. Outer Border Frame
+        ctx.strokeStyle = "#cbd5e1";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(60, 60, canvasWidth - 120, canvasHeight - 120);
+
+        // 3. Top Banner (Dark navy / slate)
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(60, 60, canvasWidth - 120, 160);
+
+        // Event Name
+        ctx.fillStyle = "#00E5FF";
+        ctx.font = "bold 22px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(activeEventName, canvasWidth / 2, 115);
+
+        // Title
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+        ctx.fillText("EduFair 부스 안내판", canvasWidth / 2, 175);
+
+        // 4. Booth Name (Large Centered)
+        ctx.fillStyle = "#0f172a";
+        const boothNameFontSize = booth.name.length > 12 ? 44 : 56;
+        ctx.font = `bold ${boothNameFontSize}px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif`;
+        ctx.fillText(booth.name, canvasWidth / 2, 330);
+
+        // 5. Operator Teacher Name
+        ctx.fillStyle = "#64748b";
+        ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+        ctx.fillText(`담당 교사: ${booth.operator_name || "미지정"}`, canvasWidth / 2, 395);
+
+        // 6. Large QR Code
         const kioskUrl = typeof window !== "undefined"
           ? `${window.location.origin}/kiosk?boothId=${booth.id}`
           : "";
 
         const qrDataUrl = await QRCode.toDataURL(kioskUrl, {
           margin: 1,
-          width: 350,
+          width: 600,
         });
+        const qrImg = await loadImage(qrDataUrl);
+        const qrDisplaySize = 520;
+        const qrX = (canvasWidth - qrDisplaySize) / 2;
+        const qrY = 460;
 
-        const qrBase64 = qrDataUrl.split(",")[1];
-        const qrBytes = Uint8Array.from(atob(qrBase64), (c) => c.charCodeAt(0));
-        const qrImage = await pdfDoc.embedPng(qrBytes);
+        // QR Background box with subtle border
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(qrX - 10, qrY - 10, qrDisplaySize + 20, qrDisplaySize + 20);
+        ctx.strokeStyle = "#e2e8f0";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(qrX - 10, qrY - 10, qrDisplaySize + 20, qrDisplaySize + 20);
 
-        // Draw Flyer UI
-        page.drawRectangle({
-          x: 40,
-          y: pageHeight - 100,
-          width: pageWidth - 80,
-          height: 60,
-          color: rgb(0.07, 0.07, 0.07),
-        });
+        ctx.drawImage(qrImg, qrX, qrY, qrDisplaySize, qrDisplaySize);
 
-        const activeEventName = initialEvents.find((e) => e.id === selectedEventId)?.name || "행사";
-        page.drawText(activeEventName, {
-          x: 60,
-          y: pageHeight - 65,
-          size: 11,
-          font: customFont,
-          color: rgb(0.0, 0.9, 1.0),
-        });
+        // 7. Bottom Guidance Box
+        const guideY = 1060;
+        const guideW = canvasWidth - 240;
+        const guideX = 120;
+        const guideH = 210;
 
-        page.drawText("EduFair 부스 안내판", {
-          x: 60,
-          y: pageHeight - 85,
-          size: 15,
-          font: customFont,
-          color: rgb(1, 1, 1),
-        });
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillRect(guideX, guideY, guideW, guideH);
+        ctx.strokeStyle = "#e2e8f0";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(guideX, guideY, guideW, guideH);
 
-        page.drawRectangle({
-          x: 40,
-          y: 60,
-          width: pageWidth - 80,
-          height: pageHeight - 160,
-          borderColor: rgb(0.8, 0.8, 0.8),
-          borderWidth: 2,
-        });
+        // Guide Title
+        ctx.fillStyle = "#0f172a";
+        ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("📌 운영 교사 안내", canvasWidth / 2, guideY + 50);
 
-        const boothNameSize = booth.name.length > 10 ? 24 : 32;
-        const nameWidth = customFont.widthOfTextAtSize(booth.name, boothNameSize);
-        page.drawText(booth.name, {
-          x: pageWidth / 2 - nameWidth / 2,
-          y: pageHeight - 170,
-          size: boothNameSize,
-          font: customFont,
-          color: rgb(0.1, 0.1, 0.1),
-        });
+        // Guide Description lines
+        ctx.fillStyle = "#475569";
+        ctx.font = "20px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+        ctx.fillText("스마트폰 카메라로 이 QR 코드를 비추어 접속하면", canvasWidth / 2, guideY + 105);
+        ctx.fillText("본 부스의 참여 기록 전용 키오스크 화면으로 자동 연결됩니다.", canvasWidth / 2, guideY + 145);
 
-        const opText = `담당 교사: ${booth.operator_name || "미지정"}`;
-        const opWidth = customFont.widthOfTextAtSize(opText, 14);
-        page.drawText(opText, {
-          x: pageWidth / 2 - opWidth / 2,
-          y: pageHeight - 205,
-          size: 14,
-          font: customFont,
-          color: rgb(0.4, 0.4, 0.4),
-        });
+        // Export canvas to JPEG
+        const pageJpgDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        const pageJpgBytes = Uint8Array.from(atob(pageJpgDataUrl.split(",")[1]), (c) => c.charCodeAt(0));
+        const pdfImage = await pdfDoc.embedJpg(pageJpgBytes);
 
-        const qrSize = 260;
-        page.drawImage(qrImage, {
-          x: pageWidth / 2 - qrSize / 2,
-          y: 190,
-          width: qrSize,
-          height: qrSize,
-        });
-
-        const footerTitle = "운영 교사 안내";
-        const footerTitleWidth = customFont.widthOfTextAtSize(footerTitle, 13);
-        page.drawText(footerTitle, {
-          x: pageWidth / 2 - footerTitleWidth / 2,
-          y: 140,
-          size: 13,
-          font: customFont,
-          color: rgb(0.07, 0.07, 0.07),
-        });
-
-        const guideText1 = "스마트폰 카메라로 이 QR 코드를 비추어 접속하면";
-        const guideText1Width = customFont.widthOfTextAtSize(guideText1, 10);
-        page.drawText(guideText1, {
-          x: pageWidth / 2 - guideText1Width / 2,
-          y: 115,
-          size: 10,
-          font: customFont,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-
-        const guideText2 = "본 부스의 참여 기록 전용 키오스크 화면으로 자동 연결됩니다.";
-        const guideText2Width = customFont.widthOfTextAtSize(guideText2, 10);
-        page.drawText(guideText2, {
-          x: pageWidth / 2 - guideText2Width / 2,
-          y: 95,
-          size: 10,
-          font: customFont,
-          color: rgb(0.3, 0.3, 0.3),
+        const pdfPage = pdfDoc.addPage([pageWidth, pageHeight]);
+        pdfPage.drawImage(pdfImage, {
+          x: 0,
+          y: 0,
+          width: pageWidth,
+          height: pageHeight,
         });
       }
 
-      setPdfStatus("PDF 인코딩 및 빌드 마무리 중...");
+      setPdfStatus("PDF 인코딩 및 파일 저장 중...");
       const pdfBytes = await pdfDoc.save();
 
+      // Trigger instant browser download
       const blob = new Blob([pdfBytes as unknown as BlobPart], { type: "application/pdf" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      const activeEvent = initialEvents.find((e) => e.id === selectedEventId);
-      const cleanEventName = activeEvent ? activeEvent.name.replace(/\s+/g, "_") : "event";
       link.download = `booths_qr_${cleanEventName}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (err) {
-      console.error(err);
+      console.error("Booth PDF generation error:", err);
       alert("PDF 생성 중 오류가 발생했습니다.");
     } finally {
       setPdfBuilding(false);

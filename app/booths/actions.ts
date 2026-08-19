@@ -8,6 +8,7 @@ export interface BoothData {
   name: string;
   description?: string;
   operator_id?: string | null;
+  operator_name?: string | null;
 }
 
 export interface TeacherOption {
@@ -61,9 +62,35 @@ export async function getBoothsAction(eventId: string) {
  */
 export async function createBoothAction(data: BoothData) {
   const supabase = await createClient();
+
+  let resolvedOperatorId: string | null = data.operator_id || null;
+  if (data.operator_name !== undefined) {
+    const rawName = (data.operator_name || "").trim();
+    if (!rawName || rawName === "미지정") {
+      resolvedOperatorId = null;
+    } else {
+      const { data: teacher } = await supabase
+        .from("teachers")
+        .select("id")
+        .eq("name", rawName)
+        .is("deleted_at", null)
+        .limit(1)
+        .maybeSingle();
+
+      resolvedOperatorId = teacher ? teacher.id : null;
+    }
+  }
+
+  const payload = {
+    event_id: data.event_id,
+    name: data.name,
+    description: data.description || null,
+    operator_id: resolvedOperatorId,
+  };
+
   const { data: newBooth, error } = await supabase
     .from("booths")
-    .insert([data])
+    .insert([payload])
     .select()
     .single();
 
@@ -72,7 +99,11 @@ export async function createBoothAction(data: BoothData) {
   }
 
   const { recordLogAction } = await import("@/app/logs/actions");
-  await recordLogAction(newBooth.event_id, "create_booth", `부스 생성 완료: 이름='${newBooth.name}', 설명='${newBooth.description || ""}'`);
+  await recordLogAction(
+    newBooth.event_id,
+    "create_booth",
+    `부스 생성 완료: 이름='${newBooth.name}', 설명='${newBooth.description || ""}'`
+  );
 
   revalidatePath("/booths");
   return { success: true, data: newBooth };
@@ -83,9 +114,33 @@ export async function createBoothAction(data: BoothData) {
  */
 export async function updateBoothAction(id: string, data: Partial<BoothData>) {
   const supabase = await createClient();
+
+  const payload: Record<string, unknown> = {};
+  if (data.name !== undefined) payload.name = data.name;
+  if (data.description !== undefined) payload.description = data.description;
+
+  if (data.operator_name !== undefined) {
+    const rawName = (data.operator_name || "").trim();
+    if (!rawName || rawName === "미지정") {
+      payload.operator_id = null;
+    } else {
+      const { data: teacher } = await supabase
+        .from("teachers")
+        .select("id")
+        .eq("name", rawName)
+        .is("deleted_at", null)
+        .limit(1)
+        .maybeSingle();
+
+      payload.operator_id = teacher ? teacher.id : null;
+    }
+  } else if (data.operator_id !== undefined) {
+    payload.operator_id = data.operator_id;
+  }
+
   const { data: updatedBooth, error } = await supabase
     .from("booths")
-    .update(data)
+    .update(payload)
     .eq("id", id)
     .select()
     .single();
@@ -95,7 +150,11 @@ export async function updateBoothAction(id: string, data: Partial<BoothData>) {
   }
 
   const { recordLogAction } = await import("@/app/logs/actions");
-  await recordLogAction(updatedBooth.event_id, "update_booth", `부스 수정 완료 (ID: ${id}): 이름='${updatedBooth.name}', 설명='${updatedBooth.description || ""}'`);
+  await recordLogAction(
+    updatedBooth.event_id,
+    "update_booth",
+    `부스 수정 완료 (ID: ${id}): 이름='${updatedBooth.name}', 설명='${updatedBooth.description || ""}'`
+  );
 
   revalidatePath("/booths");
   return { success: true, data: updatedBooth };

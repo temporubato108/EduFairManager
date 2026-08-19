@@ -106,7 +106,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
   // Create/Edit Form States
   const [formName, setFormName] = useState("");
   const [formDesc, setFormDesc] = useState("");
-  const [formOperatorId, setFormOperatorId] = useState<string>("unassigned");
+  const [formOperatorName, setFormOperatorName] = useState("");
 
   // Load selected event's default preference on start
   useEffect(() => {
@@ -157,7 +157,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
   const resetForm = () => {
     setFormName("");
     setFormDesc("");
-    setFormOperatorId("unassigned");
+    setFormOperatorName("");
     setErrorMessage(null);
   };
 
@@ -166,7 +166,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
     setEditingBooth(booth);
     setFormName(booth.name);
     setFormDesc(booth.description || "");
-    setFormOperatorId(booth.operator_id || "unassigned");
+    setFormOperatorName(booth.operator_name === "미지정" ? "" : booth.operator_name);
     setErrorMessage(null);
   };
 
@@ -180,7 +180,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
         event_id: selectedEventId,
         name: formName,
         description: formDesc || undefined,
-        operator_id: formOperatorId === "unassigned" ? null : formOperatorId,
+        operator_name: formOperatorName.trim() || undefined,
       });
 
       if (res.error) {
@@ -202,7 +202,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
       const res = await updateBoothAction(editingBooth.id, {
         name: formName,
         description: formDesc || undefined,
-        operator_id: formOperatorId === "unassigned" ? null : formOperatorId,
+        operator_name: formOperatorName.trim() || undefined,
       });
 
       if (res.error) {
@@ -652,7 +652,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="c-desc" className="text-slate-600 dark:text-[#98989D]">상세 설명</Label>
+                <Label htmlFor="c-desc" className="text-slate-600 dark:text-[#98989D]">상세 설명 (선택)</Label>
                 <Input
                   id="c-desc"
                   value={formDesc}
@@ -664,20 +664,21 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="c-operator" className="text-slate-600 dark:text-[#98989D]">담당 운영교사</Label>
-                <Select value={formOperatorId} onValueChange={(val) => val && setFormOperatorId(val)} disabled={isPending}>
-                  <SelectTrigger id="c-operator" className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]">
-                    <SelectValue placeholder="담당 교사 선택" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-[#1E1E1E] border-slate-200 dark:border-[#2C2C2E] dark:text-white">
-                    <SelectItem value="unassigned">담당 교사 없음 (미지정)</SelectItem>
-                    {teachers.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name} ({t.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="c-operator" className="text-slate-600 dark:text-[#98989D]">담당 운영교사 (선택)</Label>
+                <Input
+                  id="c-operator"
+                  list="teachers-datalist"
+                  placeholder="예: 홍길동"
+                  value={formOperatorName}
+                  onChange={(e) => setFormOperatorName(e.target.value)}
+                  disabled={isPending}
+                  className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
+                />
+                <datalist id="teachers-datalist">
+                  {teachers.map((t) => (
+                    <option key={t.id} value={t.name} label={`${t.name} (${t.email})`} />
+                  ))}
+                </datalist>
               </div>
 
               <DialogFooter className="pt-4">
@@ -739,7 +740,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="e-desc" className="text-slate-600 dark:text-[#98989D]">상세 설명</Label>
+                <Label htmlFor="e-desc" className="text-slate-600 dark:text-[#98989D]">상세 설명 (선택)</Label>
                 <Input
                   id="e-desc"
                   value={formDesc}
@@ -750,20 +751,16 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="e-operator" className="text-slate-600 dark:text-[#98989D]">담당 운영교사</Label>
-                <Select value={formOperatorId} onValueChange={(val) => val && setFormOperatorId(val)} disabled={isPending}>
-                  <SelectTrigger id="e-operator" className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]">
-                    <SelectValue placeholder="담당 교사 선택" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-[#1E1E1E] border-slate-200 dark:border-[#2C2C2E] dark:text-white">
-                    <SelectItem value="unassigned">담당 교사 없음 (미지정)</SelectItem>
-                    {teachers.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name} ({t.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="e-operator" className="text-slate-600 dark:text-[#98989D]">담당 운영교사 (선택)</Label>
+                <Input
+                  id="e-operator"
+                  list="teachers-datalist"
+                  placeholder="예: 홍길동"
+                  value={formOperatorName}
+                  onChange={(e) => setFormOperatorName(e.target.value)}
+                  disabled={isPending}
+                  className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
+                />
               </div>
 
               <DialogFooter className="pt-4">

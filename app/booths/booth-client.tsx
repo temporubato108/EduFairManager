@@ -240,49 +240,73 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
     document.body.removeChild(link);
   };
 
-  // Handle Print QR
+  // Handle Print QR (Hidden iframe for 100% popup-blocker proof printing)
   const handlePrintQr = () => {
     if (!qrCodeDataUrl || !viewingQrBooth) return;
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
 
-    printWindow.document.write(`
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "none";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
       <html>
         <head>
           <title>부스 QR 인쇄 - ${viewingQrBooth.name}</title>
           <style>
+            @page {
+              size: auto;
+              margin: 15mm;
+            }
             body {
-              font-family: Arial, sans-serif;
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
               display: flex;
               flex-direction: column;
               align-items: center;
               justify-content: center;
-              height: 100vh;
+              min-height: 80vh;
               margin: 0;
+              background: white;
+              color: black;
             }
             .container {
               text-align: center;
-              border: 2px solid #2C2C2E;
-              border-radius: 20px;
+              border: 2px solid #333;
+              border-radius: 24px;
               padding: 40px;
-              max-width: 400px;
+              max-width: 420px;
+              box-sizing: border-box;
             }
             h1 {
               font-size: 28px;
-              margin-bottom: 5px;
+              font-weight: 800;
+              margin: 0 0 8px 0;
+              color: #111;
             }
             p {
-              color: #555;
-              font-size: 16px;
-              margin-bottom: 30px;
+              color: #666;
+              font-size: 15px;
+              margin: 0 0 30px 0;
+              line-height: 1.4;
             }
             img {
-              width: 250px;
-              height: 250px;
+              width: 260px;
+              height: 260px;
+              display: block;
+              margin: 0 auto;
             }
             @media print {
               body { background: white; }
-              .container { border: none; }
+              .container { border: 2px solid #000; }
             }
           </style>
         </head>
@@ -292,16 +316,20 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
             <p>스캔하면 즉시 이 부스의 운영화면(Kiosk)으로 연결됩니다.</p>
             <img src="${qrCodeDataUrl}" />
           </div>
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 500);
-            };
-          </script>
         </body>
       </html>
     `);
-    printWindow.document.close();
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 1000);
+    }, 300);
   };
 
   // Advanced High-Definition Canvas-to-PDF Exporter using jsPDF for Booth Signs

@@ -414,34 +414,95 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     });
   };
 
-  // Handle Single Student QR Print
+  // Handle Single Student QR Print (Hidden iframe for 100% popup-blocker proof printing)
   const handlePrintStudentQr = () => {
     if (!studentQrDataUrl || !viewingQrStudent) return;
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>${viewingQrStudent.student_number} ${viewingQrStudent.name} QR</title>
-            <style>
-              body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-              .card { border: 2px solid #000; padding: 20px; text-align: center; border-radius: 12px; }
-              img { width: 220px; height: 220px; }
-              h2 { margin: 10px 0 5px; font-size: 20px; }
-              p { margin: 0; font-size: 14px; color: #555; }
-            </style>
-          </head>
-          <body onload="window.print();window.close();">
-            <div class="card">
-              <img src="${studentQrDataUrl}" />
-              <h2>${viewingQrStudent.name}</h2>
-              <p>${viewingQrStudent.student_number}</p>
-            </div>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-    }
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "none";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${viewingQrStudent.student_number} ${viewingQrStudent.name} QR 인쇄</title>
+          <style>
+            @page {
+              size: auto;
+              margin: 15mm;
+            }
+            body {
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 80vh;
+              margin: 0;
+              background: white;
+              color: black;
+            }
+            .card {
+              border: 2px solid #333;
+              padding: 30px 40px;
+              text-align: center;
+              border-radius: 20px;
+              max-width: 320px;
+              box-sizing: border-box;
+            }
+            img {
+              width: 220px;
+              height: 220px;
+              display: block;
+              margin: 0 auto;
+            }
+            h2 {
+              margin: 16px 0 4px;
+              font-size: 24px;
+              font-weight: 800;
+            }
+            p {
+              margin: 0;
+              font-size: 16px;
+              font-weight: 600;
+              color: #555;
+            }
+            @media print {
+              body { background: white; }
+              .card { border: 2px solid #000; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <img src="${studentQrDataUrl}" />
+            <h2>${viewingQrStudent.name}</h2>
+            <p>${viewingQrStudent.student_number}</p>
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 1000);
+    }, 300);
   };
 
   // Handle Single Student QR Download PNG

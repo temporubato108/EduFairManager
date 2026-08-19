@@ -136,13 +136,13 @@ export function LogsClientPage({ initialEvents }: LogsClientPageProps) {
   };
 
   const getActionBadgeColor = (type: string) => {
-    if (type === "login") return "bg-blue-950/80 border-blue-800/30 text-blue-400";
-    if (type.startsWith("create_")) return "bg-purple-950/80 border-purple-800/30 text-purple-400";
-    if (type.startsWith("update_")) return "bg-amber-950/80 border-amber-800/30 text-amber-400";
-    if (type.startsWith("delete_")) return "bg-rose-950/80 border-rose-800/30 text-rose-400";
-    if (type === "scan_success") return "bg-emerald-950/80 border-emerald-800/30 text-emerald-400";
-    if (type.startsWith("scan_")) return "bg-red-950/80 border-red-800/30 text-red-400";
-    return "bg-slate-950 border-slate-800 text-slate-400";
+    if (type === "login") return "bg-blue-600 dark:bg-blue-800 border-blue-500 text-white font-bold";
+    if (type.startsWith("create_")) return "bg-purple-600 dark:bg-purple-800 border-purple-500 text-white font-bold";
+    if (type.startsWith("update_")) return "bg-amber-600 dark:bg-amber-800 border-amber-500 text-white font-bold";
+    if (type.startsWith("delete_")) return "bg-rose-600 dark:bg-rose-800 border-rose-500 text-white font-bold";
+    if (type === "scan_success") return "bg-emerald-600 dark:bg-emerald-800 border-emerald-500 text-white font-bold";
+    if (type.startsWith("scan_")) return "bg-red-600 dark:bg-red-800 border-red-500 text-white font-bold";
+    return "bg-slate-600 dark:bg-slate-700 border-slate-500 text-white font-bold";
   };
 
   const formatLogTime = (isoString: string) => {

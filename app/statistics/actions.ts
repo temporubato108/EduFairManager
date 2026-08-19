@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { parseBoothOperator } from "@/lib/utils";
 
 export interface BoothStat {
   id: string;
@@ -85,7 +86,7 @@ export async function getStatisticsDataAction(eventId: string) {
     // 1. Fetch active booths
     const { data: booths, error: bError } = await supabase
       .from("booths")
-      .select("id, name, operator:teachers(name)")
+      .select("id, name, description, operator:teachers(name)")
       .eq("event_id", eventId)
       .is("deleted_at", null);
 
@@ -123,12 +124,19 @@ export async function getStatisticsDataAction(eventId: string) {
     });
 
     const boothStats: BoothStat[] = activeBooths.map((b) => {
-      const boothData = b as unknown as BoothJoined;
-      const opName = boothData.operator ? boothData.operator.name : "미지정";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rawBooth = b as any;
+      const opObj = Array.isArray(rawBooth.operator)
+        ? rawBooth.operator[0]
+        : rawBooth.operator;
+      const { operator_name } = parseBoothOperator({
+        description: rawBooth.description,
+        operator: opObj,
+      });
       return {
         id: b.id,
         name: b.name,
-        operatorName: opName,
+        operatorName: operator_name,
         count: boothStatMap[b.id] || 0,
       };
     });

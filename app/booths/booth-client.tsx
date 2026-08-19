@@ -331,14 +331,20 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("캔버스 렌더러를 초기화할 수 없습니다.");
 
-      const loadImage = (src: string): Promise<HTMLImageElement> => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = reject;
-          img.src = src;
-        });
+      // Helper: Fast dataURL to Uint8Array converter
+      const dataUrlToUint8Array = (dataUrl: string): Uint8Array => {
+        const base64 = dataUrl.split(",")[1];
+        const binaryString = window.atob(base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
       };
+
+      // Temporary offscreen canvas for QR rendering
+      const qrCanvas = document.createElement("canvas");
 
       for (let i = 0; i < booths.length; i++) {
         const booth = booths[i];
@@ -372,26 +378,26 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
         ctx.fillStyle = "#0f172a";
         const boothNameFontSize = booth.name.length > 12 ? 44 : 56;
         ctx.font = `bold ${boothNameFontSize}px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif`;
-        ctx.fillText(booth.name, canvasWidth / 2, 330);
+        ctx.fillText(String(booth.name || ""), canvasWidth / 2, 330);
 
         // 5. Operator Teacher Name
         ctx.fillStyle = "#64748b";
         ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
         ctx.fillText(`담당 교사: ${booth.operator_name || "미지정"}`, canvasWidth / 2, 395);
 
-        // 6. Large QR Code
+        // 6. Large QR Code via QRCode.toCanvas
         const kioskUrl = typeof window !== "undefined"
           ? `${window.location.origin}/kiosk?boothId=${booth.id}`
           : "";
 
-        const qrDataUrl = await QRCode.toDataURL(kioskUrl, {
-          margin: 1,
-          width: 600,
-        });
-        const qrImg = await loadImage(qrDataUrl);
         const qrDisplaySize = 520;
         const qrX = (canvasWidth - qrDisplaySize) / 2;
         const qrY = 460;
+
+        await QRCode.toCanvas(qrCanvas, kioskUrl, {
+          width: qrDisplaySize,
+          margin: 1,
+        });
 
         // QR Background box with subtle border
         ctx.fillStyle = "#ffffff";
@@ -400,7 +406,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
         ctx.lineWidth = 3;
         ctx.strokeRect(qrX - 10, qrY - 10, qrDisplaySize + 20, qrDisplaySize + 20);
 
-        ctx.drawImage(qrImg, qrX, qrY, qrDisplaySize, qrDisplaySize);
+        ctx.drawImage(qrCanvas, qrX, qrY, qrDisplaySize, qrDisplaySize);
 
         // 7. Bottom Guidance Box
         const guideY = 1060;
@@ -428,7 +434,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
 
         // Export canvas to JPEG
         const pageJpgDataUrl = canvas.toDataURL("image/jpeg", 0.92);
-        const pageJpgBytes = Uint8Array.from(atob(pageJpgDataUrl.split(",")[1]), (c) => c.charCodeAt(0));
+        const pageJpgBytes = dataUrlToUint8Array(pageJpgDataUrl);
         const pdfImage = await pdfDoc.embedJpg(pageJpgBytes);
 
         const pdfPage = pdfDoc.addPage([pageWidth, pageHeight]);
@@ -452,8 +458,9 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
       link.click();
       document.body.removeChild(link);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error("Booth PDF generation error:", err);
-      alert("PDF 생성 중 오류가 발생했습니다.");
+      alert(`PDF 생성 중 오류가 발생했습니다: ${msg}`);
     } finally {
       setPdfBuilding(false);
       setPdfStatus("");

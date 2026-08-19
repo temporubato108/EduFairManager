@@ -596,15 +596,20 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("캔버스 렌더러를 초기화할 수 없습니다.");
 
-      // Helper to load image
-      const loadImage = (src: string): Promise<HTMLImageElement> => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = reject;
-          img.src = src;
-        });
+      // Helper: Fast dataURL to Uint8Array converter
+      const dataUrlToUint8Array = (dataUrl: string): Uint8Array => {
+        const base64 = dataUrl.split(",")[1];
+        const binaryString = window.atob(base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
       };
+
+      // Temporary offscreen canvas for QR rendering
+      const qrCanvas = document.createElement("canvas");
 
       for (let p = 0; p < totalPages; p++) {
         setPdfStatus(`학생 명찰 페이지 렌더링 중 (${p + 1}/${totalPages} 페이지)...`);
@@ -652,22 +657,22 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
           // 4. Student Name (Large Bold)
           ctx.fillStyle = "#0f172a";
           ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
-          ctx.fillText(student.name, innerX + 16, innerY + 64);
+          ctx.fillText(String(student.name || ""), innerX + 16, innerY + 64);
 
           // 5. Student Number (e.g. 1학년 2반 3번)
           ctx.fillStyle = "#475569";
           ctx.font = "bold 16px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
-          ctx.fillText(student.student_number, innerX + 16, innerY + 92);
+          ctx.fillText(String(student.student_number || ""), innerX + 16, innerY + 92);
 
-          // 6. Generate and draw QR Code
-          const qrDataUrl = await QRCode.toDataURL(getStudentStampbookUrl(student.qr_code), {
-            margin: 1,
-            width: 320,
-          });
-          const qrImg = await loadImage(qrDataUrl);
+          // 6. Generate and draw QR Code directly via QRCode.toCanvas (0 DOM Image creation, 0 tainting)
           const qrDisplaySize = 190;
           const qrX = innerX + (innerW - qrDisplaySize) / 2;
           const qrY = innerY + 115;
+
+          await QRCode.toCanvas(qrCanvas, getStudentStampbookUrl(student.qr_code), {
+            width: qrDisplaySize,
+            margin: 1,
+          });
 
           // QR Code container box
           ctx.fillStyle = "#ffffff";
@@ -676,7 +681,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
           ctx.lineWidth = 1;
           ctx.strokeRect(qrX - 4, qrY - 4, qrDisplaySize + 8, qrDisplaySize + 8);
 
-          ctx.drawImage(qrImg, qrX, qrY, qrDisplaySize, qrDisplaySize);
+          ctx.drawImage(qrCanvas, qrX, qrY, qrDisplaySize, qrDisplaySize);
 
           // 7. Footer text ("EduFair 참여 QR")
           ctx.fillStyle = "#94a3b8";
@@ -687,7 +692,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
 
         // Export current canvas page to JPEG
         const pageJpgDataUrl = canvas.toDataURL("image/jpeg", 0.92);
-        const pageJpgBytes = Uint8Array.from(atob(pageJpgDataUrl.split(",")[1]), (c) => c.charCodeAt(0));
+        const pageJpgBytes = dataUrlToUint8Array(pageJpgDataUrl);
         const pdfImage = await pdfDoc.embedJpg(pageJpgBytes);
 
         const pdfPage = pdfDoc.addPage([pageWidth, pageHeight]);
@@ -711,8 +716,9 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
       link.click();
       document.body.removeChild(link);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error("PDF generation error:", err);
-      alert("PDF 생성 중 오류가 발생했습니다.");
+      alert(`PDF 생성 중 오류가 발생했습니다: ${msg}`);
     } finally {
       setPdfBuilding(false);
       setPdfStatus("");

@@ -623,7 +623,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     XLSX.writeFile(wb, "학생_업로드_양식.xlsx");
   };
 
-  // High-Definition Canvas-to-PDF Exporter using jsPDF (3x4 Grid, 12 Cards per A4 Page)
+  // High-Definition Canvas-to-PDF Exporter using jsPDF (2x2 Grid, 4 Cards per A4 Page, Exactly 92mm x 120mm per Student)
   const handleExportPdf = async () => {
     const targetStudents = filteredStudents.length > 0 ? filteredStudents : students;
     if (targetStudents.length === 0 || !selectedEventId) return;
@@ -641,15 +641,23 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
       const pageWidth = 595.28;
       const pageHeight = 841.89;
 
-      // Canvas dimensions (2x scale for 300 DPI high-definition print)
-      const canvasWidth = 1240;
-      const canvasHeight = 1754;
-      const margin = 40;
-      const cols = 3;
-      const rows = 4;
-      const cardWidth = (canvasWidth - margin * 2) / cols;
-      const cardHeight = (canvasHeight - margin * 2) / rows;
-      const itemsPerPage = cols * rows; // 12
+      // High-resolution 300 DPI A4 Canvas (2480 x 3508 px)
+      // Exactly 92mm x 120mm card per student (2 columns x 2 rows = 4 cards per page)
+      const canvasWidth = 2480;
+      const canvasHeight = 3508;
+
+      const pxPerMmX = canvasWidth / 210; // 11.8095 px/mm
+      const pxPerMmY = canvasHeight / 297; // 11.8114 px/mm
+
+      const cardWidth = 92 * pxPerMmX; // exactly 92mm (~1086.48px)
+      const cardHeight = 120 * pxPerMmY; // exactly 120mm (~1417.37px)
+
+      const cols = 2;
+      const rows = 2;
+      const marginX = (canvasWidth - cardWidth * cols) / 2; // ~153.5px (~13.0mm margin)
+      const marginY = (canvasHeight - cardHeight * rows) / 2; // ~336.6px (~28.5mm margin)
+
+      const itemsPerPage = cols * rows; // 4
       const totalPages = Math.ceil(targetStudents.length / itemsPerPage);
 
       const activeEvent = initialEvents.find((e) => e.id === selectedEventId);
@@ -669,7 +677,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
       for (let p = 0; p < totalPages; p++) {
         setPdfStatus(`학생 명찰 페이지 렌더링 중 (${p + 1}/${totalPages} 페이지)...`);
 
-        // Clear canvas
+        // Clear canvas with pure white
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
@@ -680,49 +688,63 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
           const col = i % cols;
           const row = Math.floor(i / cols);
 
-          const x = margin + col * cardWidth;
-          const y = margin + row * cardHeight;
-          const padding = 10;
+          const x = marginX + col * cardWidth;
+          const y = marginY + row * cardHeight;
+
+          // 1. Draw outer dotted cut-guide line (exactly 92mm x 120mm)
+          ctx.strokeStyle = "#94a3b8";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([8, 8]);
+          ctx.strokeRect(x, y, cardWidth, cardHeight);
+          ctx.setLineDash([]); // Reset dash
+
+          // Inner card area with 3.5mm padding
+          const padding = 40;
           const innerX = x + padding;
           const innerY = y + padding;
           const innerW = cardWidth - padding * 2;
           const innerH = cardHeight - padding * 2;
 
-          // 1. Draw outer dotted cut-guide line
-          ctx.strokeStyle = "#cbd5e1";
-          ctx.lineWidth = 1;
-          ctx.setLineDash([4, 4]);
-          ctx.strokeRect(x, y, cardWidth, cardHeight);
-          ctx.setLineDash([]); // Reset dash
-
-          // 2. Draw card solid border & soft background
-          ctx.fillStyle = "#f8fafc";
+          // 2. Draw card solid border & crisp white background
+          ctx.fillStyle = "#ffffff";
           ctx.fillRect(innerX, innerY, innerW, innerH);
-          ctx.strokeStyle = "#e2e8f0";
-          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = "#cbd5e1";
+          ctx.lineWidth = 3;
           ctx.strokeRect(innerX, innerY, innerW, innerH);
 
-          // 3. Event Name (top small text)
-          ctx.fillStyle = "#64748b";
-          ctx.font = "bold 15px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
-          ctx.textAlign = "left";
-          const trimmedEvent = activeEventName.length > 18 ? activeEventName.substring(0, 18) + "..." : activeEventName;
-          ctx.fillText(trimmedEvent, innerX + 16, innerY + 28);
+          // 3. Top Banner (Event Header)
+          const headerHeight = 120;
+          ctx.fillStyle = "#f8fafc";
+          ctx.fillRect(innerX + 3, innerY + 3, innerW - 6, headerHeight);
+          ctx.strokeStyle = "#e2e8f0";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(innerX, innerY + headerHeight);
+          ctx.lineTo(innerX + innerW, innerY + headerHeight);
+          ctx.stroke();
 
-          // 4. Student Name (Large Bold)
-          ctx.fillStyle = "#0f172a";
-          ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
-          ctx.fillText(String(student.name || ""), innerX + 16, innerY + 64);
-
-          // 5. Student Number (e.g. 1학년 2반 3번)
           ctx.fillStyle = "#475569";
-          ctx.font = "bold 16px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
-          ctx.fillText(String(student.student_number || ""), innerX + 16, innerY + 92);
+          ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.textAlign = "center";
+          const trimmedEvent = activeEventName.length > 22 ? activeEventName.substring(0, 22) + "..." : activeEventName;
+          ctx.fillText(trimmedEvent, innerX + innerW / 2, innerY + 72);
 
-          // 6. Generate and draw QR Code directly via QRCode.toCanvas (0 DOM Image creation, 0 tainting)
-          const qrDisplaySize = 190;
+          // 4. Student Number (e.g. 6학년 1반 23번)
+          ctx.fillStyle = "#4f46e5";
+          ctx.font = "bold 40px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(String(student.student_number || ""), innerX + innerW / 2, innerY + 200);
+
+          // 5. Student Name (Large Bold)
+          ctx.fillStyle = "#0f172a";
+          ctx.font = "bold 76px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(String(student.name || ""), innerX + innerW / 2, innerY + 300);
+
+          // 6. Generate and draw QR Code (~55mm x 55mm = 650px)
+          const qrDisplaySize = 650;
           const qrX = innerX + (innerW - qrDisplaySize) / 2;
-          const qrY = innerY + 115;
+          const qrY = innerY + 360;
 
           await QRCode.toCanvas(qrCanvas, getStudentStampbookUrl(student.qr_code), {
             width: qrDisplaySize,
@@ -731,30 +753,34 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
 
           // QR Code container box
           ctx.fillStyle = "#ffffff";
-          ctx.fillRect(qrX - 4, qrY - 4, qrDisplaySize + 8, qrDisplaySize + 8);
+          ctx.fillRect(qrX - 12, qrY - 12, qrDisplaySize + 24, qrDisplaySize + 24);
           ctx.strokeStyle = "#e2e8f0";
-          ctx.lineWidth = 1;
-          ctx.strokeRect(qrX - 4, qrY - 4, qrDisplaySize + 8, qrDisplaySize + 8);
+          ctx.lineWidth = 3;
+          ctx.strokeRect(qrX - 12, qrY - 12, qrDisplaySize + 24, qrDisplaySize + 24);
 
           ctx.drawImage(qrCanvas, qrX, qrY, qrDisplaySize, qrDisplaySize);
 
-          // 7. Footer text ("EduFair 참여 QR")
+          // 7. Footer Guide text
+          ctx.fillStyle = "#64748b";
+          ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("💡 부스 방문 시 위 QR코드를 보여주세요", innerX + innerW / 2, innerY + innerH - 70);
+
           ctx.fillStyle = "#94a3b8";
-          ctx.font = "13px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
-          ctx.textAlign = "right";
-          ctx.fillText("EduFair 참여 QR", innerX + innerW - 14, innerY + innerH - 12);
+          ctx.font = "24px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.fillText("EduFair 스마트 스탬프투어", innerX + innerW / 2, innerY + innerH - 30);
         }
 
         // Add page to jsPDF
         if (p > 0) {
           doc.addPage();
         }
-        const pageJpgDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        const pageJpgDataUrl = canvas.toDataURL("image/jpeg", 0.95);
         doc.addImage(pageJpgDataUrl, "JPEG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
       }
 
       setPdfStatus("PDF 파일 다운로드 중...");
-      doc.save(`students_qr_${cleanEventName}.pdf`);
+      doc.save(`students_qr_92x120_${cleanEventName}.pdf`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("PDF generation error:", err);

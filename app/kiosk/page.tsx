@@ -22,6 +22,7 @@ import {
   Camera,
   EyeOff,
   UserCheck,
+  RefreshCw,
 } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
 
@@ -51,6 +52,11 @@ function KioskContent() {
   const [scanState, setScanState] = useState<"idle" | "scanning">("idle");
   const [participantCount, setParticipantCount] = useState(0);
   
+  // Camera hardware loading & error recovery states
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraRetryCount, setCameraRetryCount] = useState(0);
+
   // Realtime overlay feedback state
   const [overlayResult, setOverlayResult] = useState<{
     type: "success" | "error";
@@ -201,29 +207,90 @@ function KioskContent() {
     }
   }, [boothId, playSuccessSound, playErrorSound]);
 
-  // QR Scanning Scanner Event Hook (Runs once per scanning session, stays alive)
+  // Helper to ensure all stale video tracks are cleanly terminated
+  const stopAllMediaTracks = () => {
+    if (typeof navigator !== "undefined" && navigator.mediaDevices) {
+      const videos = document.querySelectorAll("video");
+      videos.forEach((video) => {
+        if (video.srcObject instanceof MediaStream) {
+          video.srcObject.getTracks().forEach((track) => track.stop());
+          video.srcObject = null;
+        }
+      });
+    }
+  };
+
+  // QR Scanning Scanner Event Hook (Robust start, camera selection, and cleanup)
   useEffect(() => {
     let html5Qrcode: Html5Qrcode | null = null;
-    
-    // Only initialize camera if we are in 'scanning' state and booth exists
+    let isMounted = true;
+
     if (booth && scanState === "scanning") {
       const startCamera = async () => {
+        setCameraLoading(true);
+        setCameraError(null);
+
+        // 1. Wait a tick (100ms) to ensure React committed #kiosk-reader into the DOM
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        if (!isMounted) return;
+
+        let readerElement = document.getElementById("kiosk-reader");
+        if (!readerElement) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          if (!isMounted) return;
+          readerElement = document.getElementById("kiosk-reader");
+          if (!readerElement) {
+            setCameraError("스캐너 화면을 준비하지 못했습니다. 다시 시도해주세요.");
+            setCameraLoading(false);
+            return;
+          }
+        }
+
         try {
+          // 2. Clean up any stale media tracks before opening a new stream
+          stopAllMediaTracks();
+
           html5Qrcode = new Html5Qrcode("kiosk-reader");
+
+          // 3. Robust camera device detection (prefer rear/environment camera)
+          let cameraConfig: string | { facingMode: { ideal: string } } = {
+            facingMode: { ideal: "environment" },
+          };
+
+          try {
+            const devices = await Html5Qrcode.getCameras();
+            if (devices && devices.length > 0) {
+              const backCamera =
+                devices.find(
+                  (d) =>
+                    d.label.toLowerCase().includes("back") ||
+                    d.label.toLowerCase().includes("rear") ||
+                    d.label.toLowerCase().includes("environment") ||
+                    d.label.toLowerCase().includes("후면")
+                ) || devices[devices.length - 1];
+
+              if (backCamera) {
+                cameraConfig = backCamera.id;
+              }
+            }
+          } catch {
+            cameraConfig = { facingMode: { ideal: "environment" } };
+          }
+
+          if (!isMounted) return;
+
           await html5Qrcode.start(
-            { facingMode: "environment" },
+            cameraConfig,
             {
               fps: 15,
               qrbox: (width, height) => {
-                const size = Math.min(width, height) * 0.75;
+                const size = Math.min(width, height) * 0.85;
                 return { width: size, height: size };
               },
             },
             (decodedText) => {
-              // If already processing a scan, ignore new frames
               if (isProcessingRef.current) return;
 
-              // Same-QR 2-second rate limit
               const now = Date.now();
               if (
                 decodedText === lastScannedQrRef.current &&
@@ -237,12 +304,25 @@ function KioskContent() {
 
               handleProcessScan(decodedText);
             },
-            () => {
-              // Ignore failure logs
-            }
+            () => {}
           );
+
+          if (isMounted) {
+            setCameraLoading(false);
+          }
         } catch (err) {
-          console.error("Camera scanner startup failed:", err);
+          console.error("Camera startup error:", err);
+          if (isMounted) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            if (errMsg.includes("Permission") || errMsg.includes("NotAllowed")) {
+              setCameraError("카메라 접근 권한이 필요합니다. 브라우저 설정에서 권한을 허용해주세요.");
+            } else if (errMsg.includes("NotReadable") || errMsg.includes("in use") || errMsg.includes("Could not start")) {
+              setCameraError("카메라 장치가 다른 앱에서 사용 중이거나 잠겨 있습니다. 다른 앱을 닫고 다시 시도해주세요.");
+            } else {
+              setCameraError("카메라를 켜지 못했습니다. 아래 버튼을 눌러 다시 시도해주세요.");
+            }
+            setCameraLoading(false);
+          }
         }
       };
 
@@ -250,13 +330,20 @@ function KioskContent() {
     }
 
     return () => {
-      if (html5Qrcode && html5Qrcode.isScanning) {
-        html5Qrcode.stop().then(() => {
-          html5Qrcode?.clear();
-        }).catch((err) => console.error("Camera stop error", err));
+      isMounted = false;
+      if (html5Qrcode) {
+        try {
+          if (html5Qrcode.isScanning) {
+            html5Qrcode.stop().catch((e) => console.warn("html5Qrcode stop error", e));
+          }
+          html5Qrcode.clear();
+        } catch (e) {
+          console.warn("html5Qrcode cleanup error", e);
+        }
       }
+      stopAllMediaTracks();
     };
-  }, [booth, scanState, handleProcessScan]);
+  }, [booth, scanState, cameraRetryCount, handleProcessScan]);
 
   // Manual fallback submission
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -491,8 +578,36 @@ function KioskContent() {
                 <div className="relative w-full aspect-square rounded-3xl overflow-hidden border-4 border-indigo-500 bg-black shadow-2xl flex items-center justify-center shrink-0">
                   <div id="kiosk-reader" className="w-full h-full aspect-square object-cover"></div>
                   
-                  {/* Neon HUD overlay elements (only active when not displaying result modal) */}
-                  {!overlayResult && (
+                  {/* Camera Loading Spinner */}
+                  {cameraLoading && !cameraError && (
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/85 gap-3 p-4 text-center">
+                      <Loader2 className="h-10 w-10 animate-spin text-indigo-400" />
+                      <p className="text-sm font-bold text-slate-300">카메라 켜는 중...</p>
+                    </div>
+                  )}
+
+                  {/* Camera Error & Retry Interface */}
+                  {cameraError && (
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#121212] p-6 text-center space-y-4">
+                      <div className="h-14 w-14 rounded-full bg-rose-950/80 border-2 border-[#FF453A] flex items-center justify-center text-[#FF453A] mx-auto">
+                        <AlertTriangle className="h-8 w-8" />
+                      </div>
+                      <div className="space-y-1.5 max-w-xs">
+                        <p className="text-base font-black text-white">카메라를 켤 수 없음</p>
+                        <p className="text-xs text-rose-400 font-semibold leading-relaxed">{cameraError}</p>
+                      </div>
+                      <Button
+                        onClick={() => setCameraRetryCount((c) => c + 1)}
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm h-11 px-5 rounded-xl gap-2 shadow-lg"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        <span>카메라 다시 연결</span>
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Neon HUD overlay elements (only active when camera is live and no modal is open) */}
+                  {!overlayResult && !cameraLoading && !cameraError && (
                     <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-6 sm:p-8 z-10">
                       <div className="flex justify-between">
                         <div className="w-14 h-14 border-t-4 border-l-4 border-indigo-400 rounded-2xl"></div>

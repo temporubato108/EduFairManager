@@ -237,7 +237,7 @@ export function StudentStampbookClientPage() {
       <div className="flex min-h-screen items-center justify-center bg-[#121212] text-white p-6 select-none">
         <Card className="w-full max-w-md border-[#2C2C2E] bg-[#1E1E1E] text-white shadow-2xl">
           <CardHeader className="text-center pb-2">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-950 text-[#00E5FF] border border-cyan-800/30 mb-2">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-950 text-indigo-400 border border-indigo-800/30 mb-2">
               <QrCode className="h-6 w-6" />
             </div>
             <CardTitle className="text-2xl font-bold tracking-tight">디지털 스탬프북</CardTitle>
@@ -269,7 +269,7 @@ export function StudentStampbookClientPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-[#00E5FF] hover:bg-[#00D0EB] text-black font-extrabold py-5 rounded-xl text-sm"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold py-5 rounded-xl text-sm"
               >
                 스탬프북 조회
               </Button>
@@ -285,7 +285,7 @@ export function StudentStampbookClientPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#121212] text-white">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-[#00E5FF]" />
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
           <p className="text-sm text-[#98989D]">스탬프 정보 실시간 불러오는 중...</p>
         </div>
       </div>
@@ -337,7 +337,7 @@ export function StudentStampbookClientPage() {
       {/* Student View Header */}
       <header className="flex h-14 items-center justify-between border-b border-[#2C2C2E] bg-[#1E1E1E] px-5">
         <div className="flex items-center gap-1.5">
-          <QrCode className="h-5 w-5 text-[#00E5FF]" />
+          <QrCode className="h-5 w-5 text-indigo-400" />
           <span className="font-extrabold tracking-tight text-white text-sm">디지털 스탬프북</span>
         </div>
         <div className="flex items-center gap-2">
@@ -367,11 +367,11 @@ export function StudentStampbookClientPage() {
         
         {/* Profile / Stats Card */}
         <Card className="border-[#2C2C2E] bg-[#1E1E1E] text-white shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#00E5FF] to-indigo-500"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-500"></div>
           <CardContent className="p-5 space-y-4">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-[10px] text-[#00E5FF] font-mono uppercase tracking-wider flex items-center gap-1 font-semibold">
+                <p className="text-[10px] text-indigo-400 font-mono uppercase tracking-wider flex items-center gap-1 font-semibold">
                   <Calendar className="h-3 w-3" />
                   {stampbook.event.name}
                 </p>
@@ -382,7 +382,7 @@ export function StudentStampbookClientPage() {
               <div className="text-right">
                 <p className="text-[10px] text-[#98989D] font-semibold">내 순위</p>
                 <div className="flex items-baseline justify-end gap-0.5 text-white">
-                  <span className="text-2xl font-black font-mono text-[#00E5FF]">
+                  <span className="text-2xl font-black font-mono text-indigo-400">
                     {stampbook.myRank > 0 ? stampbook.myRank : "-"}
                   </span>
                   <span className="text-[10px] font-semibold text-slate-400">위</span>
@@ -400,7 +400,7 @@ export function StudentStampbookClientPage() {
               </div>
               <div className="w-full h-2 bg-[#121212] rounded-full overflow-hidden border border-[#2C2C2E]/40">
                 <div
-                  className="h-full bg-gradient-to-r from-[#00E5FF] to-[#32D74B] rounded-full transition-all duration-700 ease-out"
+                  className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all duration-700 ease-out"
                   style={{ width: `${progressPercent}%` }}
                 ></div>
               </div>
@@ -415,7 +415,7 @@ export function StudentStampbookClientPage() {
             className={cn(
               "flex-1 text-center py-2.5 text-xs font-bold border-b-2 transition-all",
               activeTab === "stamps"
-                ? "border-[#00E5FF] text-[#00E5FF] bg-cyan-950/10"
+                ? "border-indigo-500 text-indigo-400 bg-indigo-950/20"
                 : "border-transparent text-slate-400 hover:text-white"
             )}
           >
@@ -426,7 +426,7 @@ export function StudentStampbookClientPage() {
             className={cn(
               "flex-1 text-center py-2.5 text-xs font-bold border-b-2 transition-all",
               activeTab === "leaderboard"
-                ? "border-[#00E5FF] text-[#00E5FF] bg-cyan-950/10"
+                ? "border-indigo-500 text-indigo-400 bg-indigo-950/20"
                 : "border-transparent text-slate-400 hover:text-white"
             )}
           >
@@ -510,7 +510,7 @@ export function StudentStampbookClientPage() {
                       key={item.studentId}
                       className={cn(
                         "flex items-center justify-between p-3.5 text-xs transition-colors",
-                        isMe ? "bg-cyan-950/20 border-y border-[#00E5FF]/30 font-semibold" : "hover:bg-slate-900/10"
+                        isMe ? "bg-indigo-950/20 border-y border-indigo-500/30 font-semibold" : "hover:bg-slate-900/10"
                       )}
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -518,7 +518,7 @@ export function StudentStampbookClientPage() {
                         <span
                           className={cn(
                             "flex h-5.5 w-5.5 items-center justify-center rounded-lg text-[10px] font-black",
-                            item.rank === 1 && "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-[#00E5FF]",
+                            item.rank === 1 && "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300",
                             item.rank === 2 && "bg-slate-100 text-slate-800 dark:bg-[#2C2C2E] dark:text-slate-200",
                             item.rank === 3 && "bg-amber-50 text-amber-800 dark:bg-[#3A2E1C] dark:text-amber-500",
                             item.rank > 3 && "bg-[#121212] text-slate-500"
@@ -531,7 +531,7 @@ export function StudentStampbookClientPage() {
                           <p className="text-white font-semibold truncate flex items-center gap-1">
                             {item.name}
                             {isMe && (
-                              <span className="text-[9px] bg-[#00E5FF]/20 text-[#00E5FF] px-1 rounded">나</span>
+                              <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-1 rounded">나</span>
                             )}
                           </p>
                           <p className="text-[9px] text-[#98989D] font-mono">
@@ -541,8 +541,8 @@ export function StudentStampbookClientPage() {
                       </div>
 
                       <div className="flex items-center gap-1.5 font-mono">
-                        <Award className="h-3.5 w-3.5 text-[#00E5FF]" />
-                        <span className="text-sm font-black text-[#00E5FF]">{item.completedCount}</span>
+                        <Award className="h-3.5 w-3.5 text-indigo-400" />
+                        <span className="text-sm font-black text-indigo-400">{item.completedCount}</span>
                         <span className="text-[9px] text-slate-500">개</span>
                       </div>
                     </div>

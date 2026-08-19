@@ -25,7 +25,7 @@ export default function LoginPage() {
             <School className="h-7 w-7" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-black tracking-tight bg-gradient-to-r from-indigo-600 to-blue-600 dark:from-indigo-400 dark:to-[#00E5FF] bg-clip-text text-transparent">
+            <CardTitle className="text-2xl font-black tracking-tight bg-gradient-to-r from-indigo-600 to-blue-600 dark:from-indigo-400 dark:to-blue-400 bg-clip-text text-transparent">
               EduFair Manager
             </CardTitle>
             <CardDescription className="text-xs text-slate-500 dark:text-[#98989D] mt-1">
@@ -54,7 +54,7 @@ export default function LoginPage() {
                 placeholder="teacher@school.es.kr"
                 required
                 disabled={isPending}
-                className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 rounded-xl h-10 text-xs focus-visible:ring-1 focus-visible:ring-indigo-500 dark:focus-visible:ring-[#00E5FF]"
+                className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 rounded-xl h-10 text-xs focus-visible:ring-1 focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-500"
               />
             </div>
 
@@ -69,14 +69,14 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 required
                 disabled={isPending}
-                className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 rounded-xl h-10 text-xs focus-visible:ring-1 focus-visible:ring-indigo-500 dark:focus-visible:ring-[#00E5FF]"
+                className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 rounded-xl h-10 text-xs focus-visible:ring-1 focus-visible:ring-indigo-500 dark:focus-visible:ring-indigo-500"
               />
             </div>
 
             <Button
               type="submit"
               disabled={isPending}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-bold h-11 rounded-xl shadow-md transition-all duration-200 text-xs gap-1.5 mt-2"
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-bold h-11 rounded-xl shadow-md transition-all duration-200 text-xs gap-1.5 mt-2"
             >
               {isPending ? (
                 <>

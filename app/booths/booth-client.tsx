@@ -357,7 +357,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
         ctx.fillRect(60, 60, canvasWidth - 120, 160);
 
         // Event Name
-        ctx.fillStyle = "#00E5FF";
+        ctx.fillStyle = "#818cf8";
         ctx.font = "bold 22px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(activeEventName, canvasWidth / 2, 115);
@@ -453,7 +453,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-[#FFFFFF]">부스 관리</h1>
             <p className="text-sm text-slate-500 dark:text-[#98989D]">
-              행사별로 운영될 부스를 지정하고 QR 코드를 출력합니다.
+              각 행사의 체험 부스를 등록하고 전용 QR 코드를 발급합니다.
             </p>
           </div>
           <Button
@@ -462,7 +462,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               setIsCreateOpen(true);
             }}
             disabled={!selectedEventId || isPending}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-semibold gap-2"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold gap-2"
           >
             <Plus className="h-4 w-4" />
             <span>새 부스 등록</span>
@@ -489,7 +489,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
             </div>
             {isFetchPending && (
               <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-[#98989D] mt-5">
-                <Loader2 className="h-4 w-4 animate-spin text-[#00E5FF]" />
+                <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
                 <span>부스 정보를 불러오는 중...</span>
               </div>
             )}
@@ -497,7 +497,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               <Button
                 onClick={handleExportBoothsPdf}
                 disabled={pdfBuilding}
-                className="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white dark:bg-[#32D74B] dark:hover:bg-[#28B83B] dark:text-black font-bold gap-2 mt-5 sm:mt-auto ml-auto"
+                className="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 dark:text-white font-bold gap-2 mt-5 sm:mt-auto ml-auto"
               >
                 {pdfBuilding ? (
                   <>
@@ -517,9 +517,9 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
 
         {/* Status display for PDF generator */}
         {pdfBuilding && (
-          <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4 dark:border-[#00E5FF]/20 dark:bg-cyan-950/20 text-center space-y-2">
-            <Loader2 className="h-6 w-6 animate-spin text-indigo-600 dark:text-[#00E5FF] mx-auto" />
-            <p className="text-xs text-indigo-800 dark:text-[#00E5FF] font-semibold">{pdfStatus}</p>
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/20 text-center space-y-2">
+            <Loader2 className="h-6 w-6 animate-spin text-indigo-600 dark:text-indigo-400 mx-auto" />
+            <p className="text-xs text-indigo-800 dark:text-indigo-300 font-semibold">{pdfStatus}</p>
             <p className="text-[10px] text-slate-400">PDF 저장이 완료될 때까지 브라우저 창을 닫지 마세요.</p>
           </div>
         )}
@@ -574,7 +574,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
                             variant="ghost"
                             size="xs"
                             onClick={() => setViewingQrBooth(booth)}
-                            className="text-[#00E5FF] hover:bg-cyan-950/20 hover:text-[#00D0EB] border border-[#00E5FF]/20 px-2.5 rounded-full text-xs font-medium gap-1.5"
+                            className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/40 px-2.5 rounded-full text-xs font-medium gap-1.5"
                           >
                             <QrCode className="h-3.5 w-3.5" />
                             <span>QR 보기</span>
@@ -693,7 +693,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-semibold"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold"
                 >
                   {isPending ? (
                     <>
@@ -779,7 +779,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-semibold"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold"
                 >
                   {isPending ? (
                     <>
@@ -797,31 +797,31 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
 
         {/* 3. QR Code View Dialog */}
         <Dialog open={viewingQrBooth !== null} onOpenChange={(open) => !open && setViewingQrBooth(null)}>
-          <DialogContent className="border-[#2C2C2E] bg-[#1E1E1E] text-white max-w-sm text-center">
+          <DialogContent className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E] text-slate-800 dark:text-white max-w-sm text-center">
             <DialogHeader>
-              <DialogTitle className="text-[#00E5FF] text-xl font-bold tracking-tight">부스 QR 코드</DialogTitle>
-              <DialogDescription className="text-[#98989D]">
+              <DialogTitle className="text-indigo-600 dark:text-indigo-400 text-xl font-bold tracking-tight">부스 QR 코드</DialogTitle>
+              <DialogDescription className="text-slate-500 dark:text-[#98989D]">
                 교사가 모바일로 이 QR 코드를 스캔하면 해당 부스의 운영화면으로 바로 자동 연결됩니다.
               </DialogDescription>
             </DialogHeader>
 
             {viewingQrBooth && (
               <div className="flex flex-col items-center justify-center p-6 space-y-4">
-                <span className="text-lg font-bold text-white tracking-wide">{viewingQrBooth.name}</span>
+                <span className="text-lg font-bold text-slate-800 dark:text-white tracking-wide">{viewingQrBooth.name}</span>
                 
                 {/* QR Display area */}
-                <div className="bg-white p-4 rounded-2xl border-4 border-[#00E5FF]">
+                <div className="bg-white p-4 rounded-2xl border-2 border-indigo-500/40 shadow-md">
                   {qrCodeDataUrl ? (
                     <img src={qrCodeDataUrl} alt={`${viewingQrBooth.name} QR`} className="w-56 h-56" />
                   ) : (
-                    <div className="w-56 h-56 flex items-center justify-center bg-[#121212]">
-                      <Loader2 className="h-8 w-8 animate-spin text-[#00E5FF]" />
+                    <div className="w-56 h-56 flex items-center justify-center bg-slate-50 dark:bg-[#121212]">
+                      <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
                     </div>
                   )}
                 </div>
 
-                <div className="w-full flex items-center gap-1.5 text-[11px] text-[#98989D] justify-center bg-[#121212] py-2 rounded-lg border border-[#2C2C2E] px-3 font-mono break-all">
-                  <span className="text-[#00E5FF] font-semibold flex-shrink-0">LINK:</span>
+                <div className="w-full flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-[#98989D] justify-center bg-slate-50 dark:bg-[#121212] py-2 rounded-lg border border-slate-200 dark:border-[#2C2C2E] px-3 font-mono break-all">
+                  <span className="text-indigo-600 dark:text-indigo-400 font-semibold flex-shrink-0">LINK:</span>
                   <span>
                     {typeof window !== "undefined"
                       ? `${window.location.origin}/kiosk?boothId=${viewingQrBooth.id}`
@@ -847,15 +847,15 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
                 variant="outline"
                 onClick={handlePrintQr}
                 disabled={!qrCodeDataUrl}
-                className="flex-1 bg-transparent border-[#2C2C2E] text-white hover:bg-[#2C2C2E] hover:text-white font-medium gap-1.5"
+                className="flex-1 bg-slate-50 dark:bg-transparent border-slate-200 dark:border-[#2C2C2E] text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-[#2C2C2E] font-medium gap-1.5"
               >
-                <Printer className="h-4 w-4 text-[#32D74B]" />
+                <Printer className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 <span>QR 인쇄</span>
               </Button>
               <Button
                 onClick={handleDownloadPng}
                 disabled={!qrCodeDataUrl}
-                className="flex-1 bg-[#00E5FF] text-black hover:bg-[#00D0EB] font-bold gap-1.5"
+                className="flex-1 bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 font-bold gap-1.5"
               >
                 <Download className="h-4 w-4" />
                 <span>PNG 다운로드</span>

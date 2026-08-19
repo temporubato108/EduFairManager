@@ -199,7 +199,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
               disabled={loading || !selectedEventId}
               className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E] text-slate-700 dark:text-white"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin text-[#00E5FF]" /> : <RefreshCw className="h-4 w-4" />}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin text-indigo-500" /> : <RefreshCw className="h-4 w-4" />}
             </Button>
           </div>
         </div>
@@ -223,7 +223,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
               </Select>
             </div>
             {errorMessage && (
-              <div className="text-xs text-[#FF453A] bg-[#3A1C1C] px-3 py-2 rounded-lg border border-red-900/30 flex items-center gap-2">
+              <div className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-3 py-2 rounded-lg border border-rose-200 dark:border-rose-900/30 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 <span>{errorMessage}</span>
               </div>
@@ -239,7 +239,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
           </div>
         ) : !dashboardData ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-[#98989D]">
-            <Loader2 className="h-10 w-10 animate-spin text-[#00E5FF] mb-4" />
+            <Loader2 className="h-10 w-10 animate-spin text-indigo-500 mb-4" />
             <p className="text-sm">실시간 이벤트 지표 집계하는 중...</p>
           </div>
         ) : (
@@ -269,7 +269,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
 
               {/* Card 2: Participated Students */}
               <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E] overflow-hidden relative">
-                <div className="absolute top-0 left-0 w-1 h-full bg-[#32D74B]"></div>
+                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
                 <CardContent className="p-6 space-y-2">
                   <div className="flex justify-between items-start">
                     <div className="space-y-1">
@@ -278,10 +278,10 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
                         <h3 className="text-3xl font-extrabold font-mono text-slate-800 dark:text-white">
                           {dashboardData.participatedStudents}
                         </h3>
-                        <span className="text-xs font-semibold text-[#32D74B] font-mono">({participatedPercentage}%)</span>
+                        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 font-mono">({participatedPercentage}%)</span>
                       </div>
                     </div>
-                    <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 p-2.5 text-[#32D74B]">
+                    <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 p-2.5 text-emerald-600 dark:text-emerald-400">
                       <UserCheck className="h-5 w-5" />
                     </div>
                   </div>
@@ -289,7 +289,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
                   {/* Progress Gauge bar */}
                   <div className="w-full h-1 bg-slate-100 dark:bg-[#121212] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[#32D74B] rounded-full transition-all duration-500"
+                      className="h-full bg-emerald-500 rounded-full transition-all duration-500"
                       style={{ width: `${participatedPercentage}%` }}
                     ></div>
                   </div>
@@ -299,7 +299,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
 
               {/* Card 3: Total Scan Stamp Count */}
               <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E] overflow-hidden relative">
-                <div className="absolute top-0 left-0 w-1 h-full bg-[#00E5FF]"></div>
+                <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start">
                     <div className="space-y-1">
@@ -308,7 +308,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
                         {dashboardData.totalParticipations}
                       </h3>
                     </div>
-                    <div className="rounded-xl bg-cyan-50 dark:bg-cyan-950/40 p-2.5 text-[#00E5FF]">
+                    <div className="rounded-xl bg-blue-50 dark:bg-blue-950/40 p-2.5 text-blue-600 dark:text-blue-400">
                       <CheckCircle2 className="h-5 w-5" />
                     </div>
                   </div>
@@ -371,7 +371,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
                                 <span
                                   className={cn(
                                     "flex h-5 w-5 items-center justify-center rounded-md text-[10px] font-bold",
-                                    idx === 0 && "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-[#00E5FF]",
+                                    idx === 0 && "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300",
                                     idx === 1 && "bg-slate-100 text-slate-800 dark:bg-[#2C2C2E] dark:text-slate-200",
                                     idx > 1 && "bg-slate-50 text-slate-500 dark:bg-[#121212] dark:text-slate-400"
                                   )}
@@ -381,7 +381,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
                                 <span className="font-semibold text-slate-800 dark:text-white">{booth.name}</span>
                                 <span className="text-[10px] text-slate-400">({booth.operatorName} 교사)</span>
                               </div>
-                              <span className="font-mono font-bold text-slate-600 dark:text-[#00E5FF]">
+                              <span className="font-mono font-bold text-slate-700 dark:text-indigo-300">
                                 {booth.count}회
                               </span>
                             </div>
@@ -389,7 +389,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
                               <div
                                 className={cn(
                                   "h-full rounded-full transition-all duration-500",
-                                  idx === 0 ? "bg-[#00E5FF]" : "bg-indigo-500/70"
+                                  idx === 0 ? "bg-indigo-600" : "bg-indigo-400/80 dark:bg-indigo-500/60"
                                 )}
                                 style={{ width: `${widthPct}%` }}
                               ></div>
@@ -406,7 +406,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
               <Card className="lg:col-span-5 border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
                 <CardHeader className="border-b border-slate-100 dark:border-[#2C2C2E] pb-3">
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4.5 w-4.5 text-[#00E5FF]" />
+                    <Clock className="h-4.5 w-4.5 text-indigo-500" />
                     <CardTitle className="text-base font-bold text-slate-800 dark:text-white">실시간 참여 피드</CardTitle>
                   </div>
                   <CardDescription className="text-xs text-slate-400">

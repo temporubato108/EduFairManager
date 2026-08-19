@@ -121,7 +121,7 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
         disabled={disabled || props.disabled}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "flex h-9 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#2C2C2E] dark:bg-[#121212] dark:text-white dark:focus:ring-[#00E5FF]/20",
+          "flex h-9 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:focus:ring-indigo-500/30",
           className
         )}
         {...props}
@@ -193,8 +193,8 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
       <div
         ref={ref}
         className={cn(
-          "absolute left-0 top-full z-50 mt-1 max-h-60 w-full min-w-[8rem] overflow-auto rounded-xl border border-slate-200 bg-white p-1 text-slate-800 shadow-xl dark:border-[#2C2C2E] dark:bg-[#1E1E1E] dark:text-white transition-all duration-150",
-          open ? "block opacity-100 scale-100" : "hidden opacity-0 scale-95 pointer-events-none",
+          "absolute left-0 top-full z-[100] mt-1 max-h-64 min-w-full w-max max-w-[24rem] sm:max-w-md overflow-x-hidden overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 text-slate-800 shadow-2xl dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 transition-all duration-150",
+          open ? "block opacity-100 scale-100 pointer-events-auto" : "hidden opacity-0 scale-95 pointer-events-none",
           className
         )}
         {...props}
@@ -232,17 +232,17 @@ const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
           setOpen(false);
         }}
         className={cn(
-          "relative flex cursor-pointer select-none items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors outline-none",
+          "relative flex cursor-pointer select-none items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm transition-colors outline-none",
           isSelected
-            ? "bg-indigo-50 font-semibold text-indigo-600 dark:bg-[#00E5FF]/10 dark:text-[#00E5FF]"
-            : "hover:bg-slate-100 dark:hover:bg-[#252525]",
+            ? "bg-indigo-50 font-semibold text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+            : "hover:bg-slate-100 dark:hover:bg-slate-800/70 dark:text-slate-200",
           disabled && "cursor-not-allowed opacity-50",
           className
         )}
         {...props}
       >
-        <span className="truncate pr-4">{children}</span>
-        {isSelected && <Check className="h-4 w-4 shrink-0 text-indigo-600 dark:text-[#00E5FF]" />}
+        <span className="whitespace-normal break-words flex-1 pr-2 text-left">{children}</span>
+        {isSelected && <Check className="h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400" />}
       </div>
     );
   }

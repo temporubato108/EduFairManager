@@ -49,7 +49,18 @@ interface StatisticsClientPageProps {
   initialEvents: EventOption[];
 }
 
-const COLORS = ["#00E5FF", "#3b82f6", "#a855f7", "#eab308", "#f97316", "#ef4444"];
+const PASTEL_PALETTE = [
+  "#6366F1", // Soft Indigo
+  "#3B82F6", // Muted Blue
+  "#10B981", // Soft Emerald
+  "#F59E0B", // Warm Amber
+  "#8B5CF6", // Soft Purple
+  "#EC4899", // Soft Rose Pink
+  "#14B8A6", // Soft Teal
+  "#F97316", // Soft Coral
+  "#64748B", // Soft Slate
+  "#0284C7", // Cerulean
+];
 
 export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProps) {
   const [selectedEventId, setSelectedEventId] = useState<string>("");
@@ -199,7 +210,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
           {statsData && (
             <Button
               onClick={handleExcelExport}
-              className="bg-[#32D74B] hover:bg-[#2bc443] text-black font-extrabold flex items-center gap-2 rounded-xl self-start sm:self-auto shadow-lg shadow-emerald-950/10"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-2 rounded-xl self-start sm:self-auto shadow-md"
             >
               <Download className="h-4.5 w-4.5" />
               <span>엑셀 다운로드</span>
@@ -227,7 +238,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
             </div>
             
             {errorMessage && (
-              <div className="text-xs text-[#FF453A] bg-[#3A1C1C] px-3 py-2 rounded-lg border border-red-900/30 flex items-center gap-2">
+              <div className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-3 py-2 rounded-lg border border-rose-200 dark:border-rose-900/30 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 <span>{errorMessage}</span>
               </div>
@@ -243,7 +254,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
               className={cn(
                 "px-4 py-2 text-sm font-semibold border-b-2 transition-all whitespace-nowrap",
                 activeTab === "overall"
-                  ? "border-[#00E5FF] text-[#00E5FF]"
+                  ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
                   : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"
               )}
             >
@@ -254,7 +265,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
               className={cn(
                 "px-4 py-2 text-sm font-semibold border-b-2 transition-all whitespace-nowrap",
                 activeTab === "grade"
-                  ? "border-[#00E5FF] text-[#00E5FF]"
+                  ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
                   : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"
               )}
             >
@@ -265,7 +276,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
               className={cn(
                 "px-4 py-2 text-sm font-semibold border-b-2 transition-all whitespace-nowrap",
                 activeTab === "booth"
-                  ? "border-[#00E5FF] text-[#00E5FF]"
+                  ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
                   : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"
               )}
             >
@@ -276,7 +287,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
               className={cn(
                 "px-4 py-2 text-sm font-semibold border-b-2 transition-all whitespace-nowrap",
                 activeTab === "student"
-                  ? "border-[#00E5FF] text-[#00E5FF]"
+                  ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
                   : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"
               )}
             >
@@ -293,7 +304,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
           </div>
         ) : loading && !statsData ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-[#98989D]">
-            <Loader2 className="h-10 w-10 animate-spin text-[#00E5FF] mb-4" />
+            <Loader2 className="h-10 w-10 animate-spin text-indigo-500 mb-4" />
             <p className="text-sm">행사 참여 및 스캔 지표 수집하는 중...</p>
           </div>
         ) : statsData ? (
@@ -307,7 +318,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
                 <div className="grid gap-6 sm:grid-cols-3">
                   <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
                     <CardContent className="p-6 flex items-center gap-4">
-                      <div className="rounded-xl bg-indigo-50 dark:bg-indigo-950/40 p-3 text-indigo-500">
+                      <div className="rounded-xl bg-indigo-50 dark:bg-indigo-950/40 p-3 text-indigo-600 dark:text-indigo-400">
                         <Users className="h-6 w-6" />
                       </div>
                       <div>
@@ -321,7 +332,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
                   
                   <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
                     <CardContent className="p-6 flex items-center gap-4">
-                      <div className="rounded-xl bg-cyan-50 dark:bg-cyan-950/40 p-3 text-[#00E5FF]">
+                      <div className="rounded-xl bg-blue-50 dark:bg-blue-950/40 p-3 text-blue-600 dark:text-blue-400">
                         <CheckCircle2 className="h-6 w-6" />
                       </div>
                       <div>
@@ -335,7 +346,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
 
                   <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
                     <CardContent className="p-6 flex items-center gap-4">
-                      <div className="rounded-xl bg-amber-50 dark:bg-amber-950/40 p-3 text-amber-500">
+                      <div className="rounded-xl bg-amber-50 dark:bg-amber-950/40 p-3 text-amber-600 dark:text-amber-400">
                         <TrendingUp className="h-6 w-6" />
                       </div>
                       <div>
@@ -354,7 +365,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
                 <div className="grid gap-6 md:grid-cols-2">
                   <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
                     <CardHeader>
-                      <CardTitle className="text-sm font-bold text-slate-800 dark:text-white">부스별 참여도 비교</CardTitle>
+                      <CardTitle className="text-sm font-bold text-slate-800 dark:text-white">부스별 참여도 비교 (부스별 개별 색상)</CardTitle>
                     </CardHeader>
                     <CardContent>
                       {isMounted ? (
@@ -364,9 +375,13 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
                               <XAxis dataKey="name" stroke="#98989D" fontSize={10} tickLine={false} />
                               <YAxis stroke="#98989D" fontSize={10} tickLine={false} />
                               <Tooltip
-                                contentStyle={{ backgroundColor: "#1E1E1E", borderColor: "#2C2C2E", color: "#FFF" }}
+                                contentStyle={{ backgroundColor: "#1E1E1E", borderColor: "#2C2C2E", color: "#FFF", borderRadius: "8px" }}
                               />
-                              <Bar dataKey="count" fill="#00E5FF" radius={[4, 4, 0, 0]} name="스캔수" />
+                              <Bar dataKey="count" radius={[6, 6, 0, 0]} name="스캔수">
+                                {sortedBoothStatsForChart.slice(0, 8).map((entry, index) => (
+                                  <Cell key={`cell-booth-${index}`} fill={PASTEL_PALETTE[index % PASTEL_PALETTE.length]} />
+                                ))}
+                              </Bar>
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
@@ -392,14 +407,14 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
                                 labelLine={false}
                                 label={({ name, percent }) => `${name} (${typeof percent === "number" ? (percent * 100).toFixed(0) : "0"}%)`}
                                 outerRadius={80}
-                                fill="#8884d8"
+                                fill="#6366F1"
                                 dataKey="도장 스캔수"
                               >
                                 {gradeChartData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                  <Cell key={`cell-grade-${index}`} fill={PASTEL_PALETTE[index % PASTEL_PALETTE.length]} />
                                 ))}
                               </Pie>
-                              <Tooltip />
+                              <Tooltip contentStyle={{ borderRadius: "8px" }} />
                             </PieChart>
                           </ResponsiveContainer>
                         </div>
@@ -489,7 +504,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
                       <tbody className="divide-y divide-slate-100 dark:divide-[#2C2C2E]/40 text-slate-700 dark:text-slate-300">
                         {sortedBoothStatsForChart.map((row, idx) => (
                           <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-[#121212]/30">
-                            <td className="p-3 font-mono font-bold text-[#00E5FF]">{idx + 1}위</td>
+                            <td className="p-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">{idx + 1}위</td>
                             <td className="p-3 font-semibold text-slate-800 dark:text-white">{row.name}</td>
                             <td className="p-3">{row.operatorName}</td>
                             <td className="p-3 text-right font-mono font-bold text-slate-800 dark:text-white">
@@ -548,7 +563,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
                               <td className="p-3 font-mono text-xs">{row.studentNumber}</td>
                               <td className="p-3 font-semibold text-slate-800 dark:text-white">{row.name}</td>
                               <td className="p-3 text-center">
-                                <span className="inline-block bg-cyan-950/80 border border-cyan-800/30 text-[#00E5FF] px-2 py-0.5 rounded font-mono font-bold text-xs">
+                                <span className="inline-block bg-indigo-50 border border-indigo-200 text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-900/40 dark:text-indigo-400 px-2 py-0.5 rounded font-mono font-bold text-xs">
                                   {row.completedBoothsCount}개
                                 </span>
                               </td>

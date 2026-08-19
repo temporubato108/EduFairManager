@@ -97,7 +97,7 @@ function StudentQrThumbnail({ code, onClick }: { code: string; onClick: () => vo
       className="inline-flex items-center gap-2.5 cursor-pointer group"
       title="클릭하여 QR 확대 및 인쇄"
     >
-      <div className="w-10 h-10 bg-white p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 group-hover:border-cyan-400 dark:group-hover:border-[#00E5FF] transition-all flex items-center justify-center shadow-xs flex-shrink-0">
+      <div className="w-10 h-10 bg-white p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 group-hover:border-indigo-400 dark:group-hover:border-indigo-500 transition-all flex items-center justify-center shadow-xs flex-shrink-0">
         {dataUrl ? (
           <img src={dataUrl} alt="Student QR" className="w-9 h-9" />
         ) : (
@@ -107,7 +107,7 @@ function StudentQrThumbnail({ code, onClick }: { code: string; onClick: () => vo
       <Button
         variant="ghost"
         size="xs"
-        className="text-[#00E5FF] group-hover:bg-cyan-950/30 group-hover:text-[#00D0EB] border border-[#00E5FF]/20 px-2 rounded-full text-xs font-medium gap-1 h-7 pointer-events-none"
+        className="text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/40 px-2 rounded-full text-xs font-medium gap-1 h-7 pointer-events-none"
       >
         <QrCode className="h-3 w-3" />
         <span>QR 확대</span>
@@ -722,7 +722,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
               variant="outline"
               className="border-slate-200 dark:border-[#2C2C2E] dark:text-white dark:hover:bg-[#1E1E1E] font-semibold gap-2"
             >
-              <Download className="h-4 w-4 text-indigo-500 dark:text-[#00E5FF]" />
+              <Download className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
               <span>엑셀 서식 다운로드</span>
             </Button>
 
@@ -732,7 +732,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
               variant="outline"
               className="border-slate-200 dark:border-[#2C2C2E] dark:text-white dark:hover:bg-[#1E1E1E] font-semibold gap-2"
             >
-              <FileSpreadsheet className="h-4 w-4 text-indigo-500 dark:text-[#00E5FF]" />
+              <FileSpreadsheet className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
               <span>엑셀 학생 업로드</span>
             </Button>
             
@@ -742,7 +742,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
                 setIsCreateOpen(true);
               }}
               disabled={!selectedEventId || isPending}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-semibold gap-2"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold gap-2"
             >
               <Plus className="h-4 w-4" />
               <span>학생 수동 등록</span>
@@ -797,7 +797,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
               <Button
                 onClick={handleExportPdf}
                 disabled={pdfBuilding}
-                className="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white dark:bg-[#32D74B] dark:hover:bg-[#28B83B] dark:text-black font-bold gap-2"
+                className="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 dark:text-white font-bold gap-2"
               >
                 {pdfBuilding ? (
                   <>
@@ -817,9 +817,9 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
 
         {/* Status display for PDF generator */}
         {pdfBuilding && (
-          <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4 dark:border-[#00E5FF]/20 dark:bg-cyan-950/20 text-center space-y-2">
-            <Loader2 className="h-6 w-6 animate-spin text-indigo-600 dark:text-[#00E5FF] mx-auto" />
-            <p className="text-xs text-indigo-800 dark:text-[#00E5FF] font-semibold">{pdfStatus}</p>
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/20 text-center space-y-2">
+            <Loader2 className="h-6 w-6 animate-spin text-indigo-600 dark:text-indigo-400 mx-auto" />
+            <p className="text-xs text-indigo-800 dark:text-indigo-300 font-semibold">{pdfStatus}</p>
             <p className="text-[10px] text-slate-400">PDF 저장이 완료될 때까지 브라우저 창을 닫지 마세요.</p>
           </div>
         )}
@@ -834,7 +834,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
               </div>
             ) : isFetchPending ? (
               <div className="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-[#98989D]">
-                <Loader2 className="h-10 w-10 animate-spin text-[#00E5FF] mb-3" />
+                <Loader2 className="h-10 w-10 animate-spin text-indigo-500 mb-3" />
                 <p className="text-sm">학생 목록을 불러오는 중...</p>
               </div>
             ) : filteredStudents.length === 0 ? (
@@ -1029,7 +1029,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
                   <span>+ 1명 추가</span>
                 </Button>
                 <span className="text-xs text-slate-500 dark:text-[#98989D] font-medium">
-                  입력된 학생: <strong className="text-indigo-600 dark:text-[#00E5FF]">{manualRows.filter((r) => r.name.trim().length > 0).length}</strong> / {manualRows.length}명
+                  입력된 학생: <strong className="text-indigo-600 dark:text-indigo-400">{manualRows.filter((r) => r.name.trim().length > 0).length}</strong> / {manualRows.length}명
                 </span>
               </div>
 
@@ -1046,7 +1046,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-semibold gap-1.5"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold gap-1.5"
                 >
                   {isPending ? (
                     <>
@@ -1067,10 +1067,10 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
 
         {/* 1-1. Single Student QR View Modal */}
         <Dialog open={viewingQrStudent !== null} onOpenChange={(open) => !open && setViewingQrStudent(null)}>
-          <DialogContent className="border-[#2C2C2E] bg-[#1E1E1E] text-white max-w-sm text-center">
+          <DialogContent className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E] text-slate-800 dark:text-white max-w-sm text-center">
             <DialogHeader>
-              <DialogTitle className="text-[#00E5FF] text-xl font-bold tracking-tight">학생 QR 코드</DialogTitle>
-              <DialogDescription className="text-[#98989D]">
+              <DialogTitle className="text-indigo-600 dark:text-indigo-400 text-xl font-bold tracking-tight">학생 QR 코드</DialogTitle>
+              <DialogDescription className="text-slate-500 dark:text-[#98989D]">
                 학생용 참여 식별 태그 및 디지털 스탬프북 접속 QR입니다.
               </DialogDescription>
             </DialogHeader>
@@ -1078,32 +1078,32 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
             {viewingQrStudent && (
               <div className="flex flex-col items-center justify-center p-4 space-y-4">
                 <div className="space-y-0.5 text-center">
-                  <h3 className="text-lg font-bold text-white tracking-wide">{viewingQrStudent.name}</h3>
-                  <p className="text-xs text-[#00E5FF] font-mono">{viewingQrStudent.student_number}</p>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-white tracking-wide">{viewingQrStudent.name}</h3>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-mono font-semibold">{viewingQrStudent.student_number}</p>
                 </div>
                 
                 {/* QR Display area */}
-                <div className="bg-white p-3 rounded-2xl border-4 border-[#00E5FF] shadow-lg shadow-cyan-950/30">
+                <div className="bg-white p-3 rounded-2xl border-2 border-indigo-500/40 shadow-md">
                   {studentQrDataUrl ? (
                     <img src={studentQrDataUrl} alt={`${viewingQrStudent.name} QR`} className="w-52 h-52" />
                   ) : (
-                    <div className="w-52 h-52 flex items-center justify-center bg-[#121212]">
-                      <Loader2 className="h-8 w-8 animate-spin text-[#00E5FF]" />
+                    <div className="w-52 h-52 flex items-center justify-center bg-slate-50 dark:bg-[#121212]">
+                      <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
                     </div>
                   )}
                 </div>
 
                 {/* Direct Stampbook Link */}
-                <div className="w-full flex items-center gap-1 text-[10px] text-[#98989D] justify-between bg-[#121212] py-2 px-3 rounded-lg border border-[#2C2C2E]">
+                <div className="w-full flex items-center gap-1 text-[10px] text-slate-500 dark:text-[#98989D] justify-between bg-slate-50 dark:bg-[#121212] py-2 px-3 rounded-lg border border-slate-200 dark:border-[#2C2C2E]">
                   <span className="font-mono truncate max-w-[200px]">
                     /stampbook?code={viewingQrStudent.qr_code}
                   </span>
                   <button
                     type="button"
                     onClick={handleCopyStampbookLink}
-                    className="text-[#00E5FF] hover:underline font-semibold flex items-center gap-1 flex-shrink-0"
+                    className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold flex items-center gap-1 flex-shrink-0"
                   >
-                    {copiedLink ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                    {copiedLink ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
                     <span>{copiedLink ? "복사됨" : "링크 복사"}</span>
                   </button>
                 </div>
@@ -1113,7 +1113,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
                   href={`/stampbook?code=${viewingQrStudent.qr_code}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all shadow-md shadow-cyan-950/20"
+                  className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-950/20"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                   <span>이 학생의 스탬프북 열기 (미리보기)</span>
@@ -1126,15 +1126,15 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
                 variant="outline"
                 onClick={handlePrintStudentQr}
                 disabled={!studentQrDataUrl}
-                className="flex-1 bg-transparent border-[#2C2C2E] text-white hover:bg-[#2C2C2E] hover:text-white font-medium gap-1.5"
+                className="flex-1 bg-slate-50 dark:bg-transparent border-slate-200 dark:border-[#2C2C2E] text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-[#2C2C2E] font-medium gap-1.5"
               >
-                <Printer className="h-4 w-4 text-[#32D74B]" />
+                <Printer className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 <span>QR 인쇄</span>
               </Button>
               <Button
                 onClick={handleDownloadStudentPng}
                 disabled={!studentQrDataUrl}
-                className="flex-1 bg-[#00E5FF] text-black hover:bg-[#00D0EB] font-bold gap-1.5"
+                className="flex-1 bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 font-bold gap-1.5"
               >
                 <Download className="h-4 w-4" />
                 <span>PNG 저장</span>
@@ -1228,7 +1228,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-semibold"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold"
                 >
                   {isPending ? (
                     <>
@@ -1265,7 +1265,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
               {/* Upload Drop Zone */}
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-300 dark:border-[#2C2C2E] rounded-xl p-8 text-center cursor-pointer hover:border-indigo-600 dark:hover:border-[#00E5FF] bg-slate-50/50 dark:bg-[#121212]/50 transition duration-150"
+                className="border-2 border-dashed border-slate-300 dark:border-[#2C2C2E] rounded-xl p-8 text-center cursor-pointer hover:border-indigo-600 dark:hover:border-indigo-500 bg-slate-50/50 dark:bg-[#121212]/50 transition duration-150"
               >
                 <input
                   type="file"
@@ -1293,7 +1293,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
                         e.stopPropagation();
                         handleDownloadTemplate();
                       }}
-                      className="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-[#00E5FF] underline font-semibold hover:opacity-80"
+                      className="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 underline font-semibold hover:opacity-80"
                     >
                       <Download className="h-3.5 w-3.5" />
                       <span>양식 엑셀 서식 다운로드</span>
@@ -1328,7 +1328,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
               <Button
                 onClick={handleImportSubmit}
                 disabled={isPending || parsedCount === null}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-semibold gap-2"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold gap-2"
               >
                 {isPending ? (
                   <>

@@ -121,7 +121,7 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
         {/* Header title */}
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-[#FFFFFF] flex items-center gap-2">
-            <Settings className="h-6 w-6 text-[#00E5FF]" />
+            <Settings className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
             <span>시스템 기본 설정</span>
           </h1>
           <p className="text-sm text-slate-500 dark:text-[#98989D]">
@@ -150,7 +150,7 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
           <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
             <CardHeader className="border-b border-slate-100 dark:border-[#2C2C2E]/60 pb-4">
               <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-white">
-                <School className="h-4 w-4 text-[#00E5FF]" />
+                <School className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 학교 프로필 설정
               </CardTitle>
               <CardDescription className="text-xs text-slate-500 dark:text-[#98989D]">
@@ -176,7 +176,7 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
                 <Label className="text-xs text-slate-500 dark:text-[#98989D]">학교 로고 이미지</Label>
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                   {/* Preview avatar */}
-                  <div className="h-20 w-20 rounded-2xl border-2 border-dashed border-indigo-200 dark:border-[#00E5FF]/30 bg-indigo-50/50 dark:bg-cyan-950/20 flex flex-col items-center justify-center overflow-hidden flex-shrink-0 relative shadow-sm">
+                  <div className="h-20 w-20 rounded-2xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/40 bg-indigo-50/50 dark:bg-indigo-950/20 flex flex-col items-center justify-center overflow-hidden flex-shrink-0 relative shadow-sm">
                     {isValidSchoolLogo(schoolLogo) && !imgError ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -190,7 +190,7 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center shadow-xs mb-1">
                           <School className="h-5 w-5" />
                         </div>
-                        <span className="text-[9px] font-bold text-indigo-600 dark:text-[#00E5FF] leading-tight">기본 학교 이미지</span>
+                        <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 leading-tight">기본 학교 이미지</span>
                       </div>
                     )}
                   </div>
@@ -211,7 +211,7 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
                         onClick={() => fileInputRef.current?.click()}
                         className="bg-transparent border-slate-200 dark:border-[#2C2C2E] text-slate-800 dark:text-white font-semibold text-xs h-9 gap-1.5 flex-1 sm:flex-initial"
                       >
-                        <Upload className="h-3.5 w-3.5 text-indigo-500 dark:text-[#00E5FF]" />
+                        <Upload className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400" />
                         <span>이미지 업로드</span>
                       </Button>
                       {schoolLogo && (
@@ -242,7 +242,7 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
           <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
             <CardHeader className="border-b border-slate-100 dark:border-[#2C2C2E]/60 pb-4">
               <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-white">
-                <QrCode className="h-4 w-4 text-[#00E5FF]" />
+                <QrCode className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 출력 및 디바이스 환경 설정
               </CardTitle>
               <CardDescription className="text-xs text-slate-500 dark:text-[#98989D]">
@@ -287,7 +287,7 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
           <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
             <CardHeader className="border-b border-slate-100 dark:border-[#2C2C2E]/60 pb-4">
               <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-white">
-                <Moon className="h-4 w-4 text-[#00E5FF]" />
+                <Moon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 기본 시스템 정책 설정
               </CardTitle>
               <CardDescription className="text-xs text-slate-500 dark:text-[#98989D]">
@@ -304,7 +304,7 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
                       <SelectValue placeholder="테마 선택" />
                     </SelectTrigger>
                     <SelectContent className="bg-white dark:bg-[#1E1E1E] border-slate-200 dark:border-[#2C2C2E] dark:text-white">
-                      <SelectItem value="true">🌙 다크 테마 기본 활성화 (블랙/네온 사양)</SelectItem>
+                      <SelectItem value="true">🌙 다크 테마 기본 활성화</SelectItem>
                       <SelectItem value="false">☀️ 라이트 테마 설정</SelectItem>
                     </SelectContent>
                   </Select>
@@ -335,7 +335,7 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
             <Button
               type="submit"
               disabled={loading}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-extrabold text-xs h-10 px-6 rounded-xl"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-extrabold text-xs h-10 px-6 rounded-xl"
             >
               {loading ? (
                 <>

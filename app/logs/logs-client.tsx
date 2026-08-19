@@ -170,7 +170,7 @@ export function LogsClientPage({ initialEvents }: LogsClientPageProps) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-[#FFFFFF] flex items-center gap-2">
-              <Shield className="h-6 w-6 text-[#00E5FF]" />
+              <Shield className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
               <span>시스템 감사 로그</span>
             </h1>
             <p className="text-sm text-slate-500 dark:text-[#98989D]">
@@ -182,7 +182,7 @@ export function LogsClientPage({ initialEvents }: LogsClientPageProps) {
             {logs.length > 0 && (
               <Button
                 onClick={handleExcelExport}
-                className="bg-[#32D74B] hover:bg-[#2bc443] text-black font-extrabold flex items-center gap-1.5 rounded-xl shadow-lg shadow-emerald-950/10 text-xs py-2 h-9"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 rounded-xl shadow-md text-xs py-2 h-9"
               >
                 <FileSpreadsheet className="h-4 w-4" />
                 <span>로그 내보내기</span>
@@ -196,7 +196,7 @@ export function LogsClientPage({ initialEvents }: LogsClientPageProps) {
               disabled={loading}
               className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E] text-slate-700 dark:text-white h-9 w-9"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin text-[#00E5FF]" /> : <RefreshCw className="h-4 w-4" />}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin text-indigo-500" /> : <RefreshCw className="h-4 w-4" />}
             </Button>
           </div>
         </div>
@@ -270,7 +270,7 @@ export function LogsClientPage({ initialEvents }: LogsClientPageProps) {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#00E5FF] hover:bg-[#00D0EB] text-black font-extrabold text-xs h-9 rounded-xl"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-9 rounded-xl"
                 >
                   검색
                 </Button>
@@ -291,7 +291,7 @@ export function LogsClientPage({ initialEvents }: LogsClientPageProps) {
           <CardContent className="p-0">
             {loading && logs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-[#98989D]">
-                <Loader2 className="h-10 w-10 animate-spin text-[#00E5FF] mb-3" />
+                <Loader2 className="h-10 w-10 animate-spin text-indigo-500 mb-3" />
                 <p className="text-sm">감사 로그 목록을 가져오는 중...</p>
               </div>
             ) : logs.length === 0 ? (

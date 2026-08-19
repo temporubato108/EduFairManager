@@ -49,7 +49,7 @@ export default function RootLayout({
               showSpinner={false}
               easing="ease"
               speed={200}
-              shadow="0 0 12px #6366F1,0 0 5px #00E5FF"
+              shadow="0 0 12px rgba(99, 102, 241, 0.5),0 0 5px rgba(99, 102, 241, 0.3)"
             />
             {children}
           </ThemeProvider>

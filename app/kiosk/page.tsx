@@ -279,7 +279,7 @@ function KioskContent() {
     return (
       <div className="flex flex-1 items-center justify-center bg-[#121212] text-white min-h-screen">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-[#00E5FF]" />
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
           <p className="text-sm text-[#98989D]">부스 정보를 불러오는 중...</p>
         </div>
       </div>
@@ -291,8 +291,8 @@ function KioskContent() {
       {/* Kiosk Header */}
       <header className="flex h-16 items-center justify-between border-b border-[#2C2C2E] bg-[#1E1E1E] px-6 z-10">
         <div className="flex items-center gap-2">
-          <QrCode className="h-6 w-6 text-[#00E5FF]" />
-          <span className="font-bold tracking-tight text-[#00E5FF]">EduFair Kiosk</span>
+          <QrCode className="h-6 w-6 text-indigo-400" />
+          <span className="font-bold tracking-tight text-indigo-400">EduFair Kiosk</span>
         </div>
         <div className="flex items-center gap-4">
           <Button
@@ -355,11 +355,11 @@ function KioskContent() {
             {scanState === "idle" && (
               <Card className="border-[#2C2C2E] bg-[#1E1E1E] text-white shadow-xl">
                 <CardHeader className="text-center pb-2">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-950 text-[#00E5FF] border border-cyan-800/30 mb-2">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-950 text-indigo-400 border border-indigo-800/30 mb-2">
                     <Store className="h-6 w-6" />
                   </div>
                   <CardTitle className="text-2xl font-bold tracking-tight text-white">{booth.name}</CardTitle>
-                  <CardDescription className="text-[#00E5FF] font-medium text-xs flex items-center justify-center gap-1 mt-1 font-mono">
+                  <CardDescription className="text-indigo-400 font-medium text-xs flex items-center justify-center gap-1 mt-1 font-mono">
                     <Calendar className="h-3 w-3" />
                     {booth.event_name}
                   </CardDescription>
@@ -380,7 +380,7 @@ function KioskContent() {
                     
                     <p className="text-xs font-semibold text-[#98989D] uppercase tracking-wider">오늘 참여자 수</p>
                     <div className="flex items-baseline justify-center gap-1">
-                      <span className="text-5xl font-extrabold font-mono tracking-tight text-[#00E5FF]">
+                      <span className="text-5xl font-extrabold font-mono tracking-tight text-indigo-400">
                         {participantCount}
                       </span>
                       <span className="text-sm font-semibold text-slate-400">명</span>
@@ -395,7 +395,7 @@ function KioskContent() {
                   {/* Big Scan Activation Button */}
                   <Button
                     onClick={() => setScanState("scanning")}
-                    className="w-full bg-[#00E5FF] hover:bg-[#00D0EB] text-black font-extrabold text-base py-6 rounded-2xl gap-2 shadow-lg shadow-cyan-950/20"
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-base py-6 rounded-2xl gap-2 shadow-lg shadow-indigo-950/20"
                   >
                     <Camera className="h-5 w-5" />
                     <span>QR 스캔 시작</span>
@@ -415,26 +415,26 @@ function KioskContent() {
                   </div>
                   <div className="flex items-baseline gap-0.5 bg-[#121212] px-3 py-1 rounded-xl border border-[#2C2C2E] font-mono">
                     <span className="text-xs text-[#98989D] mr-1">스캔수</span>
-                    <span className="text-base font-bold text-[#00E5FF]">{participantCount}</span>
+                    <span className="text-base font-bold text-indigo-400">{participantCount}</span>
                     <span className="text-[10px] text-slate-500">명</span>
                   </div>
                 </div>
 
                 {/* Viewport Frame */}
-                <div className="relative aspect-square w-full rounded-3xl overflow-hidden border-4 border-[#00E5FF] bg-black shadow-lg shadow-cyan-950/20">
+                <div className="relative aspect-square w-full rounded-3xl overflow-hidden border-4 border-indigo-500/60 bg-black shadow-lg shadow-indigo-950/20">
                   <div id="kiosk-reader" className="w-full h-full object-cover"></div>
                   
                   {/* Neon HUD overlay elements */}
                   <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-8">
                     <div className="flex justify-between">
-                      <div className="w-6 h-6 border-t-4 border-l-4 border-[#00E5FF]"></div>
-                      <div className="w-6 h-6 border-t-4 border-r-4 border-[#00E5FF]"></div>
+                      <div className="w-6 h-6 border-t-4 border-l-4 border-indigo-400"></div>
+                      <div className="w-6 h-6 border-t-4 border-r-4 border-indigo-400"></div>
                     </div>
                     {/* Scanner scanning bar indicator */}
-                    <div className="w-full h-0.5 bg-[#00E5FF] opacity-40 shadow-glow animate-scan-line"></div>
+                    <div className="w-full h-0.5 bg-indigo-400 opacity-40 shadow-glow animate-scan-line"></div>
                     <div className="flex justify-between">
-                      <div className="w-6 h-6 border-b-4 border-l-4 border-[#00E5FF]"></div>
-                      <div className="w-6 h-6 border-b-4 border-r-4 border-[#00E5FF]"></div>
+                      <div className="w-6 h-6 border-b-4 border-l-4 border-indigo-400"></div>
+                      <div className="w-6 h-6 border-b-4 border-r-4 border-indigo-400"></div>
                     </div>
                   </div>
                 </div>
@@ -452,7 +452,7 @@ function KioskContent() {
                   <Button
                     type="submit"
                     disabled={manualPending || !manualInput.trim()}
-                    className="bg-[#00E5FF] hover:bg-[#00D0EB] text-black font-semibold text-xs h-9 px-4 rounded-xl"
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs h-9 px-4 rounded-xl"
                   >
                     입력
                   </Button>
@@ -552,7 +552,7 @@ function KioskContent() {
                 부스의 QR 코드를 모바일 기기로 스캔하여 접속하면 해당 부스의 운영 모드로 즉시 전환됩니다.
               </p>
               <div className="rounded-lg bg-[#121212] p-4 border border-[#2C2C2E] text-left text-xs space-y-2 font-mono">
-                <p className="text-[#98989D]"><span className="text-[#00E5FF] font-semibold">관리자 안내:</span></p>
+                <p className="text-[#98989D]"><span className="text-indigo-400 font-semibold">관리자 안내:</span></p>
                 <p className="text-slate-300">1. 부스 관리 페이지에서 부스를 생성하세요.</p>
                 <p className="text-slate-300">2. 생성된 부스의 QR 코드를 출력하여 부스 안내판에 게시하세요.</p>
                 <p className="text-slate-300">3. 부스 운영 교사가 해당 QR 코드를 촬영하면 이 화면이 활성화됩니다.</p>
@@ -570,7 +570,7 @@ export default function KioskPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-[#121212] text-white">
-          <Loader2 className="h-8 w-8 animate-spin text-[#00E5FF]" />
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
         </div>
       }
     >

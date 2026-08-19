@@ -253,7 +253,7 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
               resetCreateForm();
               setIsCreateOpen(true);
             }}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-semibold gap-2"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold gap-2"
           >
             <Plus className="h-4 w-4" />
             <span>새 행사 등록</span>
@@ -267,7 +267,7 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
             className={cn(
               "px-5 py-3 text-sm font-semibold border-b-2 -mb-px transition-all duration-200",
               activeTab === "active"
-                ? "border-indigo-600 text-indigo-600 dark:border-[#00E5FF] dark:text-[#00E5FF]"
+                ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
                 : "border-transparent text-slate-500 hover:text-slate-700 dark:text-[#98989D] dark:hover:text-white"
             )}
           >
@@ -278,7 +278,7 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
             className={cn(
               "px-5 py-3 text-sm font-semibold border-b-2 -mb-px transition-all duration-200",
               activeTab === "template"
-                ? "border-indigo-600 text-indigo-600 dark:border-[#00E5FF] dark:text-[#00E5FF]"
+                ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
                 : "border-transparent text-slate-500 hover:text-slate-700 dark:text-[#98989D] dark:hover:text-white"
             )}
           >
@@ -341,7 +341,7 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
                             {event.status === "end" && "종료"}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-[#1C2C3A] dark:text-[#00E5FF]">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-950/60 dark:text-blue-400">
                             <Sparkles className="h-3 w-3" />
                             템플릿
                           </span>
@@ -349,7 +349,7 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
                       </TableCell>
                       <TableCell className="text-sm text-slate-600 dark:text-[#98989D]">
                         {event.allow_double_participation ? (
-                          <span className="text-indigo-600 dark:text-[#00E5FF] font-medium">허용</span>
+                          <span className="text-indigo-600 dark:text-indigo-400 font-medium">허용</span>
                         ) : (
                           <span>금지</span>
                         )}
@@ -489,7 +489,7 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
                     checked={formIsTemplate}
                     onChange={(e) => setFormIsTemplate(e.target.checked)}
                     disabled={isPending}
-                    className="w-4 h-4 accent-indigo-600 dark:accent-[#00E5FF] cursor-pointer"
+                    className="w-4 h-4 accent-indigo-600 dark:accent-indigo-500 cursor-pointer"
                   />
                   <Label htmlFor="c-template" className="text-slate-700 dark:text-[#FFFFFF] cursor-pointer">
                     템플릿으로 등록
@@ -510,7 +510,7 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-semibold"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold"
                 >
                   {isPending ? (
                     <>
@@ -619,7 +619,7 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
                     checked={formIsTemplate}
                     onChange={(e) => setFormIsTemplate(e.target.checked)}
                     disabled={isPending}
-                    className="w-4 h-4 accent-indigo-600 dark:accent-[#00E5FF] cursor-pointer"
+                    className="w-4 h-4 accent-indigo-600 dark:accent-indigo-500 cursor-pointer"
                   />
                   <Label htmlFor="e-template" className="text-slate-700 dark:text-[#FFFFFF] cursor-pointer">
                     템플릿으로 등록
@@ -640,7 +640,7 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-semibold"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold"
                 >
                   {isPending ? (
                     <>
@@ -711,7 +711,7 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-semibold"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold"
                 >
                   {isPending ? (
                     <>
@@ -769,7 +769,7 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-[#00E5FF] dark:hover:bg-[#00D0EB] dark:text-black font-semibold"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold"
                 >
                   {isPending ? (
                     <>

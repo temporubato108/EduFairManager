@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { PDFDocument, rgb } from "pdf-lib";
-import fontkit from "@pdf-lib/fontkit";
+import { loadKoreanFontBytes, registerFontkitSafe } from "@/lib/font-helper";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -313,16 +313,11 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
     setPdfStatus("한글 나눔고딕 폰트 불러오는 중...");
 
     try {
-      // 1. Fetch custom Korean font (NanumGothic) from Google Fonts Gstatic
-      const fontUrl = "https://fonts.gstatic.com/s/nanumgothic/v23/PN_oRfi-QwtS4YL5Z65EtlqMy5rs1As.ttf";
-      const fontBytes = await fetch(fontUrl).then((res) => {
-        if (!res.ok) throw new Error("한글 폰트 로드 실패");
-        return res.arrayBuffer();
-      });
+      const fontBytes = await loadKoreanFontBytes();
 
       setPdfStatus("PDF 문서 초기화 중...");
       const pdfDoc = await PDFDocument.create();
-      pdfDoc.registerFontkit(fontkit);
+      registerFontkitSafe(pdfDoc);
       const customFont = await pdfDoc.embedFont(fontBytes);
 
       const pageWidth = 595.28;

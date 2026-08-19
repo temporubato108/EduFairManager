@@ -2,6 +2,32 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  const url = request.nextUrl.clone();
+
+  // 1. Instant 0ms bypass for public pages, kiosk, stampbook, static assets, and favicon
+  const isLoginPage = url.pathname.startsWith("/login");
+  const isPublicPage =
+    url.pathname.startsWith("/stampbook") ||
+    url.pathname.startsWith("/kiosk") ||
+    url.pathname.startsWith("/_next") ||
+    url.pathname === "/favicon.ico" ||
+    url.pathname.startsWith("/api/public");
+
+  if (isPublicPage) {
+    return NextResponse.next();
+  }
+
+  // 2. Quick cookie check: If unauthenticated visitor has no auth cookies and is not on /login, redirect immediately
+  const allCookies = request.cookies.getAll();
+  const hasAuthCookie = allCookies.some(
+    (c) => c.name.includes("auth-token") || c.name.startsWith("sb-")
+  );
+
+  if (!hasAuthCookie && !isLoginPage) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // 3. For pages needing authentication verification, instantiate Supabase client
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -32,21 +58,6 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const url = request.nextUrl.clone();
-
-  // Define route rules
-  const isLoginPage = url.pathname.startsWith("/login");
-  const isPublicPage =
-    url.pathname.startsWith("/stampbook") ||
-    url.pathname.startsWith("/kiosk") ||
-    url.pathname.startsWith("/_next") ||
-    url.pathname === "/favicon.ico" ||
-    url.pathname.startsWith("/api/public");
-
-  if (isPublicPage) {
-    return response;
-  }
 
   if (!user && !isLoginPage) {
     // Redirect to login if not logged in

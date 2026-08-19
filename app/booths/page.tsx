@@ -5,9 +5,11 @@ import { BoothClientPage } from "./booth-client";
 export const revalidate = 0; // Force dynamic fetching for real-time accuracy
 
 export default async function BoothsPage() {
-  // Pre-fetch active events and teachers list for dropdown options
-  const events = await getEventsAction();
-  const teachers = await getTeachersAction();
+  // Pre-fetch active events and teachers list concurrently in parallel
+  const [events, teachers] = await Promise.all([
+    getEventsAction(),
+    getTeachersAction(),
+  ]);
 
   // Filter out templates for booth associations
   const activeEvents = events.filter((e) => !e.is_template);

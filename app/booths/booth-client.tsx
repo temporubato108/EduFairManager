@@ -136,7 +136,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const boothUrl = `${origin}/kiosk?boothId=${viewingQrBooth.id}`;
       
-      QRCode.toDataURL(boothUrl, { width: 300, margin: 2 })
+      QRCode.toDataURL(boothUrl, { width: 700, margin: 1 })
         .then((url) => setQrCodeDataUrl(url))
         .catch((err) => {
           console.error("QR Code generation error", err);
@@ -240,9 +240,12 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
     document.body.removeChild(link);
   };
 
-  // Handle Print QR (Hidden iframe for 100% popup-blocker proof printing)
+  // Handle Print QR (Exact A4 Booth Sign template, matching whole PDF layout)
   const handlePrintQr = () => {
     if (!qrCodeDataUrl || !viewingQrBooth) return;
+
+    const activeEvent = initialEvents.find((e) => e.id === selectedEventId);
+    const activeEventName = activeEvent?.name || "EduFair 행사";
 
     const iframe = document.createElement("iframe");
     iframe.style.position = "fixed";
@@ -261,60 +264,147 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
       <!DOCTYPE html>
       <html>
         <head>
-          <title>부스 QR 인쇄 - ${viewingQrBooth.name}</title>
+          <title>부스 QR 안내판 - ${viewingQrBooth.name}</title>
           <style>
             @page {
-              size: auto;
-              margin: 15mm;
+              size: A4 portrait;
+              margin: 10mm;
+            }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
             }
             body {
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, "Malgun Gothic", "맑은 고딕", "Segoe UI", Roboto, sans-serif;
+              background: white;
+              color: #0f172a;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              min-height: 95vh;
+            }
+            .sign-frame {
+              width: 100%;
+              max-width: 186mm;
+              height: 268mm;
+              border: 3px solid #cbd5e1;
+              border-radius: 20px;
               display: flex;
               flex-direction: column;
               align-items: center;
-              justify-content: center;
-              min-height: 80vh;
-              margin: 0;
-              background: white;
-              color: black;
-            }
-            .container {
-              text-align: center;
-              border: 2px solid #333;
-              border-radius: 24px;
-              padding: 40px;
-              max-width: 420px;
+              overflow: hidden;
+              background: #ffffff;
               box-sizing: border-box;
             }
-            h1 {
-              font-size: 28px;
-              font-weight: 800;
-              margin: 0 0 8px 0;
-              color: #111;
+            .top-banner {
+              width: 100%;
+              background: #0f172a;
+              padding: 24px 20px 20px;
+              text-align: center;
             }
-            p {
-              color: #666;
+            .event-name {
               font-size: 15px;
-              margin: 0 0 30px 0;
-              line-height: 1.4;
+              font-weight: 700;
+              color: #818cf8;
+              margin-bottom: 6px;
             }
-            img {
-              width: 260px;
-              height: 260px;
+            .banner-title {
+              font-size: 26px;
+              font-weight: 800;
+              color: #ffffff;
+              letter-spacing: -0.5px;
+            }
+            .content-area {
+              flex: 1;
+              width: 100%;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: space-evenly;
+              padding: 24px 30px 28px;
+            }
+            .booth-header {
+              text-align: center;
+            }
+            .booth-name {
+              font-size: 34px;
+              font-weight: 900;
+              color: #0f172a;
+              margin-bottom: 8px;
+              letter-spacing: -0.5px;
+              line-height: 1.2;
+            }
+            .operator-name {
+              font-size: 18px;
+              font-weight: 700;
+              color: #64748b;
+            }
+            .qr-wrapper {
+              background: #ffffff;
+              border: 2px solid #e2e8f0;
+              border-radius: 20px;
+              padding: 12px;
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            }
+            .qr-wrapper img {
+              width: 85mm;
+              height: 85mm;
               display: block;
-              margin: 0 auto;
+            }
+            .guide-box {
+              width: 100%;
+              background: #f8fafc;
+              border: 1.5px solid #e2e8f0;
+              border-radius: 16px;
+              padding: 16px 20px;
+              text-align: center;
+            }
+            .guide-title {
+              font-size: 17px;
+              font-weight: 800;
+              color: #0f172a;
+              margin-bottom: 6px;
+            }
+            .guide-desc {
+              font-size: 13px;
+              color: #475569;
+              line-height: 1.5;
             }
             @media print {
-              body { background: white; }
-              .container { border: 2px solid #000; }
+              body {
+                min-height: auto;
+                background: white;
+              }
+              .sign-frame {
+                border: 3px solid #cbd5e1;
+                height: 268mm;
+              }
             }
           </style>
         </head>
         <body>
-          <div class="container">
-            <h1>${viewingQrBooth.name}</h1>
-            <p>스캔하면 즉시 이 부스의 운영화면(Kiosk)으로 연결됩니다.</p>
-            <img src="${qrCodeDataUrl}" />
+          <div class="sign-frame">
+            <div class="top-banner">
+              <div class="event-name">${activeEventName}</div>
+              <div class="banner-title">EduFair 부스 안내판</div>
+            </div>
+            <div class="content-area">
+              <div class="booth-header">
+                <h1 class="booth-name">${viewingQrBooth.name}</h1>
+                <p class="operator-name">담당 교사: ${viewingQrBooth.operator_name || "미지정"}</p>
+              </div>
+              <div class="qr-wrapper">
+                <img src="${qrCodeDataUrl}" />
+              </div>
+              <div class="guide-box">
+                <div class="guide-title">📌 운영 교사 안내</div>
+                <p class="guide-desc">
+                  스마트폰 카메라로 이 QR 코드를 비추어 접속하면<br />
+                  본 부스의 참여 기록 전용 키오스크 화면으로 자동 연결됩니다.
+                </p>
+              </div>
+            </div>
           </div>
         </body>
       </html>
@@ -826,18 +916,38 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
             </DialogHeader>
 
             {viewingQrBooth && (
-              <div className="flex flex-col items-center justify-center p-6 space-y-4">
-                <span className="text-lg font-bold text-slate-800 dark:text-white tracking-wide">{viewingQrBooth.name}</span>
-                
-                {/* QR Display area */}
-                <div className="bg-white p-4 rounded-2xl border-2 border-indigo-500/40 shadow-md">
-                  {qrCodeDataUrl ? (
-                    <img src={qrCodeDataUrl} alt={`${viewingQrBooth.name} QR`} className="w-56 h-56" />
-                  ) : (
-                    <div className="w-56 h-56 flex items-center justify-center bg-slate-50 dark:bg-[#121212]">
-                      <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+              <div className="flex flex-col items-center justify-center p-2 sm:p-3 space-y-3">
+                {/* Booth Sign Preview Container */}
+                <div className="w-full max-w-[280px] bg-white rounded-2xl border-2 border-slate-300 dark:border-slate-600 shadow-md overflow-hidden flex flex-col text-slate-800 text-center">
+                  <div className="bg-[#0f172a] py-2 px-3 text-center">
+                    <p className="text-[10px] font-bold text-indigo-400 truncate">
+                      {initialEvents.find((e) => e.id === selectedEventId)?.name || "EduFair 행사"}
+                    </p>
+                    <p className="text-xs font-black text-white">EduFair 부스 안내판</p>
+                  </div>
+                  
+                  <div className="pt-3 pb-1 space-y-0.5 px-3">
+                    <h3 className="text-lg font-black text-slate-900 tracking-tight leading-tight">{viewingQrBooth.name}</h3>
+                    <p className="text-xs font-bold text-slate-500">담당 교사: {viewingQrBooth.operator_name || "미지정"}</p>
+                  </div>
+                  
+                  {/* QR Display area */}
+                  <div className="px-3 py-1 flex items-center justify-center">
+                    <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-xs inline-block">
+                      {qrCodeDataUrl ? (
+                        <img src={qrCodeDataUrl} alt={`${viewingQrBooth.name} QR`} className="w-44 h-44 object-contain" />
+                      ) : (
+                        <div className="w-44 h-44 flex items-center justify-center bg-slate-50">
+                          <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
+
+                  <div className="m-2.5 p-2 bg-slate-50 rounded-xl border border-slate-200 text-[10px] text-slate-600 space-y-0.5">
+                    <p className="font-bold text-slate-800">📌 운영 교사 안내</p>
+                    <p className="text-slate-500 text-[9px] leading-relaxed">스마트폰 카메라로 스캔 시 키오스크 화면으로 자동 연결됩니다.</p>
+                  </div>
                 </div>
 
                 <div className="w-full flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-[#98989D] justify-center bg-slate-50 dark:bg-[#121212] py-2 rounded-lg border border-slate-200 dark:border-[#2C2C2E] px-3 font-mono break-all">

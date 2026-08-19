@@ -24,7 +24,7 @@ import { supabase } from "@/lib/supabase/client";
 
 import { getCachedSettings, setCachedSettings } from "@/lib/cache";
 
-import { isValidSchoolLogo } from "@/app/settings/actions";
+import { isValidSchoolLogo } from "@/lib/utils";
 
 interface SidebarProps {
   onClose?: () => void;

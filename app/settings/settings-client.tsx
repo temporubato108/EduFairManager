@@ -24,7 +24,8 @@ import {
   School,
   QrCode,
 } from "lucide-react";
-import { saveSettingsAction, SystemSettings, isValidSchoolLogo } from "./actions";
+import { saveSettingsAction, SystemSettings } from "./actions";
+import { isValidSchoolLogo } from "@/lib/utils";
 
 interface SettingsClientPageProps {
   initialSettings: SystemSettings;

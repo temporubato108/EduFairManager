@@ -12,19 +12,7 @@ export interface SystemSettings {
   default_allow_double_participation: string;
 }
 
-export function isValidSchoolLogo(logo?: string | null): boolean {
-  if (!logo || typeof logo !== "string") return false;
-  const trimmed = logo.trim().replace(/^["']|["']$/g, "").trim();
-  if (!trimmed || trimmed === "null" || trimmed === "undefined" || trimmed === "{}" || trimmed === "[]") {
-    return false;
-  }
-  return (
-    trimmed.startsWith("data:image/") ||
-    trimmed.startsWith("http://") ||
-    trimmed.startsWith("https://") ||
-    trimmed.startsWith("/")
-  );
-}
+import { isValidSchoolLogo } from "@/lib/utils";
 
 export async function getSettingsAction(): Promise<SystemSettings> {
   const defaultSettings: SystemSettings = {

@@ -392,9 +392,9 @@ function KioskContent() {
       </header>
 
       {/* Main Kiosk Area */}
-      <main className="flex flex-1 flex-col items-center justify-center p-3 sm:p-6 relative overflow-hidden h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-4rem)] max-h-[calc(100dvh-3.5rem)] sm:max-h-[calc(100dvh-4rem)]">
+      <main className="flex flex-1 flex-col items-center justify-center p-2 sm:p-4 relative overflow-hidden h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-4rem)] max-h-[calc(100dvh-3.5rem)] sm:max-h-[calc(100dvh-4rem)]">
         {error ? (
-          <Card className="w-full max-w-lg border-rose-950 bg-[#1E1E1E] text-white shadow-xl">
+          <Card className="w-full max-w-md border-rose-950 bg-[#1E1E1E] text-white shadow-xl">
             <CardHeader className="text-center">
               <CardTitle className="text-xl font-bold tracking-tight text-[#FF453A]">부스 연결 끊김</CardTitle>
               <CardDescription className="text-[#98989D]">
@@ -411,20 +411,20 @@ function KioskContent() {
             </CardContent>
           </Card>
         ) : booth ? (
-          <div className="w-full max-w-sm sm:max-w-md md:max-w-lg flex flex-col items-center justify-center mx-auto my-auto overflow-hidden">
+          <div className="w-full max-w-md sm:max-w-lg flex flex-col items-center justify-center mx-auto my-auto overflow-hidden px-1">
             
-            {/* 1. Kiosk Dashboard Mode (Idle State) - Big, Bold, Center-Grouped */}
+            {/* 1. Kiosk Dashboard Mode (Idle State) - Full-width Center Card */}
             {scanState === "idle" && (
               <Card className="border-2 border-[#2C2C2E] bg-[#1E1E1E] text-white shadow-2xl w-full my-auto rounded-[2rem] overflow-hidden p-5 sm:p-7 flex flex-col justify-center space-y-5 animate-scale-up">
-                <CardHeader className="text-center pb-1 space-y-2.5 p-0">
-                  <div className="mx-auto flex h-18 w-18 sm:h-22 sm:w-22 items-center justify-center rounded-3xl bg-indigo-950/90 text-indigo-400 border-2 border-indigo-700/50 shadow-xl shadow-indigo-950/40 p-4">
-                    <Store className="h-10 w-10 sm:h-12 sm:w-12" />
+                <CardHeader className="text-center pb-1 space-y-2 p-0">
+                  <div className="mx-auto flex h-18 w-18 sm:h-20 sm:w-20 items-center justify-center rounded-3xl bg-indigo-950/90 text-indigo-400 border-2 border-indigo-700/50 shadow-xl shadow-indigo-950/40 p-4">
+                    <Store className="h-10 w-10 sm:h-11 sm:w-11" />
                   </div>
                   <CardTitle className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
                     {booth.name}
                   </CardTitle>
                   <div className="flex justify-center pt-0.5">
-                    <span className="text-base sm:text-lg text-indigo-300 font-bold px-5 py-1.5 rounded-full bg-indigo-950/90 border border-indigo-700/60 inline-flex items-center gap-2 font-mono shadow-md">
+                    <span className="text-sm sm:text-base text-indigo-300 font-bold px-4 py-1.5 rounded-full bg-indigo-950/90 border border-indigo-700/60 inline-flex items-center gap-2 font-mono shadow-md">
                       <Calendar className="h-4 w-4 text-indigo-400" />
                       {booth.event_name}
                     </span>
@@ -433,13 +433,13 @@ function KioskContent() {
 
                 <CardContent className="space-y-4 sm:space-y-5 p-0">
                   {booth.description && (
-                    <p className="text-base sm:text-lg text-center text-slate-200 px-4 py-3 bg-[#121212] rounded-2xl border-2 border-[#2C2C2E] leading-relaxed font-medium">
+                    <p className="text-sm sm:text-base text-center text-slate-200 px-4 py-3 bg-[#121212] rounded-2xl border-2 border-[#2C2C2E] leading-relaxed font-medium">
                       {booth.description}
                     </p>
                   )}
 
                   {/* Main Metric: Today's Participant Count */}
-                  <div className="rounded-3xl bg-[#121212] border-2 border-[#2C2C2E] p-6 sm:p-8 text-center space-y-2 relative overflow-hidden shadow-inner">
+                  <div className="rounded-3xl bg-[#121212] border-2 border-[#2C2C2E] p-6 sm:p-7 text-center space-y-2 relative overflow-hidden shadow-inner">
                     <div className="absolute top-3.5 left-4 flex items-center gap-1.5 text-xs sm:text-sm text-slate-400 font-bold">
                       <UserCheck className="h-4 w-4 text-[#32D74B]" />
                       <span>운영 현황</span>
@@ -462,32 +462,32 @@ function KioskContent() {
                   {/* Big Scan Activation Button */}
                   <Button
                     onClick={() => setScanState("scanning")}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 active:scale-[0.97] text-white font-black text-2xl sm:text-3xl md:text-4xl py-7 sm:py-8 rounded-2xl sm:rounded-3xl gap-3.5 shadow-2xl shadow-indigo-950/70 transition-all flex items-center justify-center"
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 active:scale-[0.97] text-white font-black text-2xl sm:text-3xl py-6 sm:py-7 rounded-2xl sm:rounded-3xl gap-3 shadow-2xl shadow-indigo-950/70 transition-all flex items-center justify-center"
                   >
-                    <Camera className="h-8 w-8 sm:h-9 sm:w-9" />
+                    <Camera className="h-8 w-8" />
                     <span>QR 스캔 시작</span>
                   </Button>
                 </CardContent>
               </Card>
             )}
 
-            {/* 2. Camera Scanning View - Tightly Centered & Grouped (No Stretching to Edges) */}
+            {/* 2. Camera Scanning View - Full-width Centered Square (Matches media_1787161263964.jpg) */}
             {scanState === "scanning" && (
               <div className="flex flex-col w-full items-center justify-center space-y-3 sm:space-y-4 my-auto animate-fade-in">
-                {/* Header Info - Directly attached above camera */}
-                <div className="w-full bg-[#1E1E1E] border-2 border-[#2C2C2E] rounded-3xl p-3.5 sm:p-4 flex items-center justify-between shadow-2xl shrink-0">
+                {/* Header Info Card */}
+                <div className="w-full bg-[#1E1E1E] border-2 border-[#2C2C2E] rounded-3xl p-4 sm:p-5 flex items-center justify-between shadow-2xl shrink-0">
                   <div className="min-w-0 pr-3">
-                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate leading-tight">{booth.name}</h2>
-                    <p className="text-xs sm:text-sm font-bold text-indigo-400 font-mono truncate mt-0.5">{booth.event_name}</p>
+                    <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight truncate leading-tight">{booth.name}</h2>
+                    <p className="text-sm font-bold text-indigo-400 font-mono truncate mt-0.5">{booth.event_name}</p>
                   </div>
                   <div className="flex items-baseline gap-1.5 bg-[#121212] px-4 py-2 rounded-2xl border-2 border-[#2C2C2E] font-mono shrink-0 shadow-inner">
-                    <span className="text-xs sm:text-sm font-bold text-slate-400">스캔</span>
+                    <span className="text-sm font-bold text-slate-400">스캔</span>
                     <span className="text-2xl sm:text-3xl font-black text-indigo-400">{participantCount}</span>
-                    <span className="text-xs sm:text-sm font-bold text-slate-400">명</span>
+                    <span className="text-sm font-bold text-slate-400">명</span>
                   </div>
                 </div>
 
-                {/* Viewport Frame - True Square Viewfinder filling center width */}
+                {/* Viewport Frame - True Square Viewfinder filling full width */}
                 <div className="relative w-full aspect-square rounded-3xl overflow-hidden border-4 border-indigo-500 bg-black shadow-2xl flex items-center justify-center shrink-0">
                   <div id="kiosk-reader" className="w-full h-full aspect-square object-cover"></div>
                   
@@ -567,9 +567,9 @@ function KioskContent() {
                   )}
                 </div>
 
-                {/* Bottom Controls Area - Directly attached below camera */}
+                {/* Bottom Controls Area - Large full-width touch targets */}
                 <div className="w-full space-y-2.5 shrink-0">
-                  {/* Manual input box */}
+                  {/* Manual input row */}
                   <form onSubmit={handleManualSubmit} className="flex gap-2.5 items-center bg-[#1E1E1E] p-2.5 rounded-2xl border-2 border-[#2C2C2E] shadow-xl">
                     <Input
                       type="text"
@@ -577,12 +577,12 @@ function KioskContent() {
                       value={manualInput}
                       onChange={(e) => setManualInput(e.target.value)}
                       disabled={manualPending}
-                      className="flex-1 bg-[#121212] border-[#2C2C2E] text-white text-base sm:text-lg placeholder:text-slate-500 h-12 sm:h-13 rounded-xl px-4 font-bold"
+                      className="flex-1 bg-[#121212] border-[#2C2C2E] text-white text-base sm:text-lg placeholder:text-slate-500 h-13 sm:h-14 rounded-xl px-4 font-bold"
                     />
                     <Button
                       type="submit"
                       disabled={manualPending || !manualInput.trim()}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-black text-base sm:text-lg h-12 sm:h-13 px-6 rounded-xl shadow-md"
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-black text-base sm:text-lg h-13 sm:h-14 px-6 sm:px-7 rounded-xl shadow-md"
                     >
                       입력
                     </Button>
@@ -592,7 +592,7 @@ function KioskContent() {
                   <Button
                     onClick={() => setScanState("idle")}
                     variant="outline"
-                    className="w-full border-2 border-[#2C2C2E] bg-[#1E1E1E] text-slate-200 hover:bg-[#2C2C2E] hover:text-white py-3 h-12 sm:h-13 rounded-2xl text-base sm:text-lg font-black gap-2.5 shadow-xl active:scale-[0.98] transition-all"
+                    className="w-full border-2 border-[#2C2C2E] bg-[#1E1E1E] text-slate-200 hover:bg-[#2C2C2E] hover:text-white py-3.5 h-13 sm:h-14 rounded-2xl text-base sm:text-lg font-black gap-2.5 shadow-xl active:scale-[0.98] transition-all"
                   >
                     <EyeOff className="h-5 w-5" />
                     <span>스캔 중지 (대시보드로 복귀)</span>

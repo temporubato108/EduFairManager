@@ -169,12 +169,12 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     }
   }, [initialEvents]);
 
-  // Generate QR Code for viewingQrStudent (encodes full Stampbook URL)
+  // Generate QR Code for viewingQrStudent (encodes full Stampbook URL in HD)
   useEffect(() => {
     if (viewingQrStudent) {
       QRCode.toDataURL(getStudentStampbookUrl(viewingQrStudent.qr_code), {
-        margin: 2,
-        width: 320,
+        margin: 1,
+        width: 600,
       })
         .then((url) => setStudentQrDataUrl(url))
         .catch(() => setStudentQrDataUrl(""));
@@ -414,9 +414,12 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     });
   };
 
-  // Handle Single Student QR Print (Hidden iframe for 100% popup-blocker proof printing)
+  // Handle Single Student QR Print (Exact 92mm x 120mm template, matching whole PDF layout)
   const handlePrintStudentQr = () => {
     if (!studentQrDataUrl || !viewingQrStudent) return;
+
+    const activeEvent = initialEvents.find((e) => e.id === selectedEventId);
+    const activeEventName = activeEvent?.name || "행사";
 
     const iframe = document.createElement("iframe");
     iframe.style.position = "fixed";
@@ -438,56 +441,135 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
           <title>${viewingQrStudent.student_number} ${viewingQrStudent.name} QR 인쇄</title>
           <style>
             @page {
-              size: auto;
+              size: A4 portrait;
               margin: 15mm;
             }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
             body {
-              font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, "Malgun Gothic", "맑은 고딕", "Segoe UI", Roboto, sans-serif;
               display: flex;
               flex-direction: column;
               align-items: center;
               justify-content: center;
-              min-height: 80vh;
-              margin: 0;
+              min-height: 90vh;
               background: white;
               color: black;
             }
-            .card {
-              border: 2px solid #333;
-              padding: 30px 40px;
-              text-align: center;
-              border-radius: 20px;
-              max-width: 320px;
+            /* Exactly 92mm x 120mm card cut guide */
+            .cut-guide {
+              width: 92mm;
+              height: 120mm;
+              border: 1px dashed #94a3b8;
+              padding: 3.5mm;
+              background: #ffffff;
+              display: flex;
+              flex-direction: column;
               box-sizing: border-box;
             }
-            img {
-              width: 220px;
-              height: 220px;
+            .card-inner {
+              width: 100%;
+              height: 100%;
+              border: 1.5px solid #cbd5e1;
+              border-radius: 12px;
+              background: #ffffff;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              overflow: hidden;
+              position: relative;
+              box-sizing: border-box;
+            }
+            .header-banner {
+              width: 100%;
+              background: #f8fafc;
+              border-bottom: 1.5px solid #e2e8f0;
+              padding: 6px 8px;
+              text-align: center;
+              font-size: 11px;
+              font-weight: 700;
+              color: #475569;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .student-info {
+              text-align: center;
+              padding-top: 6px;
+              padding-bottom: 2px;
+            }
+            .student-number {
+              font-size: 13px;
+              font-weight: 700;
+              color: #4f46e5;
+              margin-bottom: 2px;
+            }
+            .student-name {
+              font-size: 23px;
+              font-weight: 900;
+              color: #0f172a;
+              letter-spacing: -0.5px;
+            }
+            .qr-container {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: #ffffff;
+              border: 1.5px solid #e2e8f0;
+              border-radius: 8px;
+              padding: 3px;
+              margin: 4px 0;
+            }
+            .qr-container img {
+              width: 52mm;
+              height: 52mm;
               display: block;
-              margin: 0 auto;
             }
-            h2 {
-              margin: 16px 0 4px;
-              font-size: 24px;
-              font-weight: 800;
+            .footer-guide {
+              margin-top: auto;
+              padding-bottom: 6px;
+              text-align: center;
             }
-            p {
-              margin: 0;
-              font-size: 16px;
-              font-weight: 600;
-              color: #555;
+            .footer-tip {
+              font-size: 8.5px;
+              font-weight: 700;
+              color: #64748b;
+              margin-bottom: 1px;
+            }
+            .footer-brand {
+              font-size: 7.5px;
+              color: #94a3b8;
             }
             @media print {
-              body { background: white; }
-              .card { border: 2px solid #000; }
+              body {
+                background: white;
+                min-height: auto;
+              }
+              .cut-guide {
+                border: 1px dashed #94a3b8;
+              }
             }
           </style>
         </head>
         <body>
-          <div class="card">
-            <img src="${studentQrDataUrl}" />
-            <h2>${viewingQrStudent.name}</h2>
-            <p>${viewingQrStudent.student_number}</p>
+          <div class="cut-guide">
+            <div class="card-inner">
+              <div class="header-banner">${activeEventName}</div>
+              <div class="student-info">
+                <div class="student-number">${viewingQrStudent.student_number}</div>
+                <div class="student-name">${viewingQrStudent.name}</div>
+              </div>
+              <div class="qr-container">
+                <img src="${studentQrDataUrl}" />
+              </div>
+              <div class="footer-guide">
+                <p class="footer-tip">💡 부스 방문 시 위 QR코드를 보여주세요</p>
+                <p class="footer-brand">EduFair 스마트 스탬프투어</p>
+              </div>
+            </div>
           </div>
         </body>
       </html>
@@ -1163,21 +1245,34 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
             </DialogHeader>
 
             {viewingQrStudent && (
-              <div className="flex flex-col items-center justify-center p-4 space-y-4">
-                <div className="space-y-0.5 text-center">
-                  <h3 className="text-lg font-bold text-slate-800 dark:text-white tracking-wide">{viewingQrStudent.name}</h3>
-                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-mono font-semibold">{viewingQrStudent.student_number}</p>
-                </div>
-                
-                {/* QR Display area */}
-                <div className="bg-white p-3 rounded-2xl border-2 border-indigo-500/40 shadow-md">
-                  {studentQrDataUrl ? (
-                    <img src={studentQrDataUrl} alt={`${viewingQrStudent.name} QR`} className="w-52 h-52" />
-                  ) : (
-                    <div className="w-52 h-52 flex items-center justify-center bg-slate-50 dark:bg-[#121212]">
-                      <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+              <div className="flex flex-col items-center justify-center p-2 sm:p-3 space-y-3">
+                {/* 92x120mm Card Preview Container */}
+                <div className="w-full max-w-[260px] bg-white rounded-2xl border-2 border-slate-300 dark:border-slate-600 shadow-md overflow-hidden flex flex-col text-slate-800 text-center">
+                  <div className="bg-slate-100 border-b border-slate-200 py-1.5 px-3 text-[11px] font-bold text-slate-600 truncate">
+                    {initialEvents.find((e) => e.id === selectedEventId)?.name || "EduFair 행사"}
+                  </div>
+                  <div className="pt-2.5 pb-1 space-y-0.5">
+                    <p className="text-xs font-bold text-indigo-600 font-mono">{viewingQrStudent.student_number}</p>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight">{viewingQrStudent.name}</h3>
+                  </div>
+                  
+                  {/* QR Display area */}
+                  <div className="px-3 py-1 flex items-center justify-center">
+                    <div className="p-1.5 bg-white rounded-xl border border-slate-200 shadow-xs inline-block">
+                      {studentQrDataUrl ? (
+                        <img src={studentQrDataUrl} alt={`${viewingQrStudent.name} QR`} className="w-40 h-40 object-contain" />
+                      ) : (
+                        <div className="w-40 h-40 flex items-center justify-center bg-slate-50">
+                          <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
+
+                  <div className="py-2 px-1 text-[9px] text-slate-500 space-y-0.5 mt-auto">
+                    <p className="font-bold text-slate-600">💡 부스 방문 시 위 QR코드를 보여주세요</p>
+                    <p className="text-slate-400">EduFair 스마트 스탬프투어</p>
+                  </div>
                 </div>
 
                 {/* Direct Stampbook Link */}

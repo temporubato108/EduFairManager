@@ -250,11 +250,19 @@ function KioskContent() {
           // 2. Clean up any stale media tracks before opening a new stream
           stopAllMediaTracks();
 
-          html5Qrcode = new Html5Qrcode("kiosk-reader");
+          // Initialize with browser native BarcodeDetector API hardware acceleration if supported
+          html5Qrcode = new Html5Qrcode("kiosk-reader", {
+            experimentalFeatures: {
+              useBarCodeDetectorIfSupported: true,
+            },
+            verbose: false,
+          });
 
-          // 3. Robust camera device detection (prefer rear/environment camera)
-          let cameraConfig: string | { facingMode: { ideal: string } } = {
+          // 3. High-Definition 1080p/4K constraints with rear camera selection
+          let cameraConfig: MediaTrackConstraints | { deviceId: { exact: string } } = {
             facingMode: { ideal: "environment" },
+            width: { min: 1280, ideal: 1920, max: 3840 },
+            height: { min: 720, ideal: 1080, max: 2160 },
           };
 
           try {
@@ -270,11 +278,17 @@ function KioskContent() {
                 ) || devices[devices.length - 1];
 
               if (backCamera) {
-                cameraConfig = backCamera.id;
+                cameraConfig = {
+                  deviceId: { exact: backCamera.id },
+                };
               }
             }
           } catch {
-            cameraConfig = { facingMode: { ideal: "environment" } };
+            cameraConfig = {
+              facingMode: { ideal: "environment" },
+              width: { min: 1280, ideal: 1920, max: 3840 },
+              height: { min: 720, ideal: 1080, max: 2160 },
+            };
           }
 
           if (!isMounted) return;
@@ -282,11 +296,13 @@ function KioskContent() {
           await html5Qrcode.start(
             cameraConfig,
             {
-              fps: 15,
+              fps: 30, // 30 FPS for buttery smooth motion and instant decoding
               qrbox: (width, height) => {
-                const size = Math.min(width, height) * 0.85;
+                const size = Math.floor(Math.min(width, height) * 0.9);
                 return { width: size, height: size };
               },
+              aspectRatio: 1.0,
+              disableFlip: false,
             },
             (decodedText) => {
               if (isProcessingRef.current) return;
@@ -306,6 +322,38 @@ function KioskContent() {
             },
             () => {}
           );
+
+          // 4. Apply continuous hardware autofocus & auto-exposure on mobile video track
+          try {
+            const videoElem = document.querySelector("#kiosk-reader video") as HTMLVideoElement | null;
+            if (videoElem && videoElem.srcObject instanceof MediaStream) {
+              const track = videoElem.srcObject.getVideoTracks()[0];
+              if (track) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const capabilities = (track.getCapabilities ? track.getCapabilities() : {}) as any;
+                const advancedConstraints: Record<string, unknown>[] = [];
+
+                if (capabilities.focusMode && Array.isArray(capabilities.focusMode) && capabilities.focusMode.includes("continuous")) {
+                  advancedConstraints.push({ focusMode: "continuous" });
+                }
+                if (capabilities.exposureMode && Array.isArray(capabilities.exposureMode) && capabilities.exposureMode.includes("continuous")) {
+                  advancedConstraints.push({ exposureMode: "continuous" });
+                }
+                if (capabilities.whiteBalanceMode && Array.isArray(capabilities.whiteBalanceMode) && capabilities.whiteBalanceMode.includes("continuous")) {
+                  advancedConstraints.push({ whiteBalanceMode: "continuous" });
+                }
+
+                if (advancedConstraints.length > 0 && track.applyConstraints) {
+                  await track.applyConstraints({
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    advanced: advancedConstraints as any,
+                  });
+                }
+              }
+            }
+          } catch (e) {
+            console.warn("Continuous autofocus not supported by browser", e);
+          }
 
           if (isMounted) {
             setCameraLoading(false);
@@ -396,6 +444,7 @@ function KioskContent() {
           aspect-ratio: 1 / 1 !important;
           object-fit: cover !important;
           border-radius: inherit !important;
+          image-rendering: -webkit-optimize-contrast !important;
         }
         #kiosk-reader img {
           display: none !important;

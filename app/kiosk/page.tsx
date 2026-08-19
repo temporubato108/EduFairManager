@@ -24,7 +24,7 @@ import {
   UserCheck,
   RefreshCw,
 } from "lucide-react";
-import { Html5Qrcode } from "html5-qrcode";
+import jsQR from "jsqr";
 
 interface BoothDetail {
   id: string;
@@ -56,6 +56,12 @@ function KioskContent() {
   const [cameraLoading, setCameraLoading] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraRetryCount, setCameraRetryCount] = useState(0);
+
+  // Native Video Stream & Scanner Engine Refs
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animFrameIdRef = useRef<number | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Realtime overlay feedback state
   const [overlayResult, setOverlayResult] = useState<{
@@ -207,104 +213,149 @@ function KioskContent() {
     }
   }, [boothId, playSuccessSound, playErrorSound]);
 
-  // Helper to ensure all stale video tracks are cleanly terminated
-  const stopAllMediaTracks = () => {
-    if (typeof navigator !== "undefined" && navigator.mediaDevices) {
-      const videos = document.querySelectorAll("video");
-      videos.forEach((video) => {
-        if (video.srcObject instanceof MediaStream) {
-          video.srcObject.getTracks().forEach((track) => track.stop());
-          video.srcObject = null;
-        }
-      });
-    }
-  };
-
-  // QR Scanning Scanner Event Hook (Robust start, camera selection, and cleanup)
+  // Native QR Scanner Lifecycle (Direct WebRTC + BarcodeDetector + jsQR Fallback)
   useEffect(() => {
-    let html5Qrcode: Html5Qrcode | null = null;
     let isMounted = true;
 
     if (booth && scanState === "scanning") {
-      const startCamera = async () => {
-        setCameraLoading(true);
-        setCameraError(null);
+      setCameraLoading(true);
+      setCameraError(null);
 
-        // 1. Wait a tick (100ms) to ensure React committed #kiosk-reader into the DOM
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        if (!isMounted) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let barcodeDetector: any = null;
+      if (typeof window !== "undefined" && "BarcodeDetector" in window) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          barcodeDetector = new (window as any).BarcodeDetector({ formats: ["qr_code"] });
+        } catch (e) {
+          console.warn("BarcodeDetector init failed, fallback to jsQR", e);
+          barcodeDetector = null;
+        }
+      }
 
-        let readerElement = document.getElementById("kiosk-reader");
-        if (!readerElement) {
-          await new Promise((resolve) => setTimeout(resolve, 200));
-          if (!isMounted) return;
-          readerElement = document.getElementById("kiosk-reader");
-          if (!readerElement) {
-            setCameraError("스캐너 화면을 준비하지 못했습니다. 다시 시도해주세요.");
-            setCameraLoading(false);
+      const startCameraStream = async () => {
+        try {
+          // Stop any previous media stream
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((t) => t.stop());
+            streamRef.current = null;
+          }
+
+          let stream: MediaStream;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: { ideal: "environment" },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+              },
+              audio: false,
+            });
+          } catch (envErr) {
+            console.warn("Environment camera failed, trying generic camera", envErr);
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: false,
+            });
+          }
+
+          if (!isMounted) {
+            stream.getTracks().forEach((t) => t.stop());
             return;
           }
-        }
 
-        try {
-          // 2. Clean up any stale media tracks before opening a new stream
-          stopAllMediaTracks();
+          streamRef.current = stream;
 
-          html5Qrcode = new Html5Qrcode("kiosk-reader", {
-            experimentalFeatures: {
-              useBarCodeDetectorIfSupported: true,
-            },
-            verbose: false,
-          });
-
-          const scanConfig = {
-            fps: 25,
-            qrbox: (width: number, height: number) => {
-              const size = Math.floor(Math.min(width, height) * 0.95);
-              return { width: size, height: size };
-            },
-            aspectRatio: 1.0,
-            disableFlip: false,
-          };
-
-          const onScanSuccess = (decodedText: string) => {
-            if (isProcessingRef.current) return;
-
-            const now = Date.now();
-            if (
-              decodedText === lastScannedQrRef.current &&
-              now - lastScannedTimeRef.current < 2000
-            ) {
-              return;
-            }
-
-            lastScannedQrRef.current = decodedText;
-            lastScannedTimeRef.current = now;
-
-            handleProcessScan(decodedText);
-          };
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            await videoRef.current.play().catch(() => {});
+          }
 
           if (!isMounted) return;
+          setCameraLoading(false);
 
-          // 3. Guaranteed reliable startup using standard W3C environment facingMode
-          await html5Qrcode.start(
-            { facingMode: "environment" },
-            scanConfig,
-            onScanSuccess,
-            () => {}
-          );
-
-          if (isMounted) {
-            setCameraLoading(false);
+          // Prepare canvas for fallback frame processing
+          if (!canvasRef.current) {
+            canvasRef.current = document.createElement("canvas");
           }
+          const canvas = canvasRef.current;
+          const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+          let lastScanTime = 0;
+
+          const scanLoop = async (now: number) => {
+            if (!isMounted || scanState !== "scanning") return;
+
+            // Run scanner at ~30 FPS (every 33ms)
+            if (now - lastScanTime >= 33) {
+              lastScanTime = now;
+              const video = videoRef.current;
+
+              if (
+                video &&
+                video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+                video.videoWidth > 0 &&
+                video.videoHeight > 0 &&
+                !isProcessingRef.current
+              ) {
+                try {
+                  let detectedCode: string | null = null;
+
+                  // 1. Priority: Native Google/Browser BarcodeDetector (Direct GPU MLKit)
+                  if (barcodeDetector) {
+                    const barcodes = await barcodeDetector.detect(video);
+                    if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                      detectedCode = barcodes[0].rawValue;
+                    }
+                  }
+
+                  // 2. Fallback: jsQR (Pure JS/WASM Canvas Decoder)
+                  if (!detectedCode && ctx) {
+                    const width = video.videoWidth;
+                    const height = video.videoHeight;
+                    if (canvas.width !== width || canvas.height !== height) {
+                      canvas.width = width;
+                      canvas.height = height;
+                    }
+                    ctx.drawImage(video, 0, 0, width, height);
+                    const imgData = ctx.getImageData(0, 0, width, height);
+                    const code = jsQR(imgData.data, imgData.width, imgData.height, {
+                      inversionAttempts: "dontInvert",
+                    });
+                    if (code && code.data) {
+                      detectedCode = code.data;
+                    }
+                  }
+
+                  if (detectedCode) {
+                    const currentTime = Date.now();
+                    if (
+                      detectedCode !== lastScannedQrRef.current ||
+                      currentTime - lastScannedTimeRef.current >= 2000
+                    ) {
+                      lastScannedQrRef.current = detectedCode;
+                      lastScannedTimeRef.current = currentTime;
+                      handleProcessScan(detectedCode);
+                    }
+                  }
+                } catch {
+                  // Non-fatal frame decode error
+                }
+              }
+            }
+
+            animFrameIdRef.current = requestAnimationFrame(scanLoop);
+          };
+
+          animFrameIdRef.current = requestAnimationFrame(scanLoop);
         } catch (err) {
           console.error("Camera startup error:", err);
           if (isMounted) {
             const errMsg = err instanceof Error ? err.message : String(err);
             if (errMsg.includes("Permission") || errMsg.includes("NotAllowed")) {
               setCameraError("카메라 접근 권한이 필요합니다. 브라우저 설정에서 권한을 허용해주세요.");
-            } else if (errMsg.includes("NotReadable") || errMsg.includes("in use") || errMsg.includes("Could not start")) {
-              setCameraError("카메라 장치가 다른 앱에서 사용 중이거나 잠겨 있습니다. 다른 앱을 닫고 다시 시도해주세요.");
+            } else if (errMsg.includes("NotReadable") || errMsg.includes("in use")) {
+              setCameraError("카메라 장치가 다른 앱에서 사용 중입니다. 다른 앱을 닫고 다시 시도해주세요.");
             } else {
               setCameraError("카메라를 켜지 못했습니다. 아래 버튼을 눌러 다시 시도해주세요.");
             }
@@ -313,22 +364,23 @@ function KioskContent() {
         }
       };
 
-      startCamera();
+      startCameraStream();
     }
 
+    const videoElem = videoRef.current;
     return () => {
       isMounted = false;
-      if (html5Qrcode) {
-        try {
-          if (html5Qrcode.isScanning) {
-            html5Qrcode.stop().catch((e) => console.warn("html5Qrcode stop error", e));
-          }
-          html5Qrcode.clear();
-        } catch (e) {
-          console.warn("html5Qrcode cleanup error", e);
-        }
+      if (animFrameIdRef.current) {
+        cancelAnimationFrame(animFrameIdRef.current);
+        animFrameIdRef.current = null;
       }
-      stopAllMediaTracks();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+      if (videoElem) {
+        videoElem.srcObject = null;
+      }
     };
   }, [booth, scanState, cameraRetryCount, handleProcessScan]);
 
@@ -363,44 +415,8 @@ function KioskContent() {
 
   return (
     <div className="flex h-screen max-h-screen flex-col bg-[#121212] text-white select-none overflow-hidden">
-      {/* Global CSS for Html5Qrcode Fullscreen Camera Stream & Countdown */}
+      {/* Global CSS for Animations */}
       <style jsx global>{`
-        #kiosk-reader {
-          width: 100% !important;
-          height: 100% !important;
-          aspect-ratio: 1 / 1 !important;
-          border: none !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          background: #000 !important;
-          position: relative !important;
-          overflow: hidden !important;
-        }
-        #kiosk-reader video {
-          width: 100% !important;
-          height: 100% !important;
-          aspect-ratio: 1 / 1 !important;
-          object-fit: cover !important;
-          border-radius: inherit !important;
-          transform: scale(1.3) !important;
-          transform-origin: center center !important;
-          image-rendering: -webkit-optimize-contrast !important;
-        }
-        #kiosk-reader img {
-          display: none !important;
-        }
-        #kiosk-reader__scan_region {
-          width: 100% !important;
-          height: 100% !important;
-          aspect-ratio: 1 / 1 !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-        }
-        #kiosk-reader__dashboard {
-          display: none !important;
-        }
         @keyframes countdownShrink {
           0% {
             width: 100%;
@@ -566,7 +582,17 @@ function KioskContent() {
 
                 {/* Viewport Frame - Full-width square viewfinder */}
                 <div className="relative w-full aspect-square rounded-3xl overflow-hidden border-4 border-indigo-500 bg-black shadow-2xl flex items-center justify-center shrink-0">
-                  <div id="kiosk-reader" className="w-full h-full aspect-square object-cover"></div>
+                  {/* Direct Native Video Element */}
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full aspect-square object-cover scale-[1.25] origin-center"
+                    style={{
+                      imageRendering: "-webkit-optimize-contrast",
+                    }}
+                  />
                   
                   {/* Camera Loading Spinner */}
                   {cameraLoading && !cameraError && (

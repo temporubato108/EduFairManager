@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { parseBoothOperator, encodeBoothDescription } from "@/lib/utils";
 
 export interface BoothData {
   event_id: string;
@@ -50,11 +51,15 @@ export async function getBoothsAction(eventId: string) {
     throw new Error(error.message);
   }
   
-  // Format to flatten operator name for the frontend
-  return (data || []).map((booth) => ({
-    ...booth,
-    operator_name: booth.operator_name || (booth.operator ? (booth.operator as { name: string }).name : "미지정"),
-  }));
+  // Format to parse custom operator name and clean description
+  return (data || []).map((booth) => {
+    const { operator_name, description } = parseBoothOperator(booth);
+    return {
+      ...booth,
+      operator_name,
+      description,
+    };
+  });
 }
 
 /**
@@ -80,6 +85,7 @@ export async function createBoothAction(data: BoothData) {
     }
   }
 
+  // 1. Try with operator_name column first
   const payload: Record<string, unknown> = {
     event_id: data.event_id,
     name: data.name,
@@ -94,12 +100,18 @@ export async function createBoothAction(data: BoothData) {
     .select()
     .single();
 
-  // If DB schema doesn't have operator_name column yet, fallback gracefully
+  // 2. If DB schema doesn't have operator_name column yet, fallback to embedding in description
   if (error && error.message?.includes("operator_name")) {
-    delete payload.operator_name;
+    const fallbackDesc = encodeBoothDescription(data.description, rawName);
+    const fallbackPayload = {
+      event_id: data.event_id,
+      name: data.name,
+      description: fallbackDesc,
+      operator_id: resolvedOperatorId,
+    };
     const retry = await supabase
       .from("booths")
-      .insert([payload])
+      .insert([fallbackPayload])
       .select()
       .single();
     newBooth = retry.data;
@@ -114,7 +126,7 @@ export async function createBoothAction(data: BoothData) {
   await recordLogAction(
     newBooth.event_id,
     "create_booth",
-    `부스 생성 완료: 이름='${newBooth.name}', 담당='${rawName || "미지정"}', 설명='${newBooth.description || ""}'`
+    `부스 생성 완료: 이름='${newBooth.name}', 담당='${rawName || "미지정"}', 설명='${data.description || ""}'`
   );
 
   revalidatePath("/booths");
@@ -127,16 +139,12 @@ export async function createBoothAction(data: BoothData) {
 export async function updateBoothAction(id: string, data: Partial<BoothData>) {
   const supabase = await createClient();
 
-  const payload: Record<string, unknown> = {};
-  if (data.name !== undefined) payload.name = data.name;
-  if (data.description !== undefined) payload.description = data.description;
+  const rawName = data.operator_name !== undefined ? (data.operator_name || "").trim() : undefined;
+  let resolvedOperatorId: string | null | undefined = data.operator_id;
 
-  let rawName = "";
-  if (data.operator_name !== undefined) {
-    rawName = (data.operator_name || "").trim();
+  if (rawName !== undefined) {
     if (!rawName || rawName === "미지정") {
-      payload.operator_id = null;
-      payload.operator_name = null;
+      resolvedOperatorId = null;
     } else {
       const { data: teacher } = await supabase
         .from("teachers")
@@ -146,12 +154,16 @@ export async function updateBoothAction(id: string, data: Partial<BoothData>) {
         .limit(1)
         .maybeSingle();
 
-      payload.operator_id = teacher ? teacher.id : null;
-      payload.operator_name = rawName;
+      resolvedOperatorId = teacher ? teacher.id : null;
     }
-  } else if (data.operator_id !== undefined) {
-    payload.operator_id = data.operator_id;
   }
+
+  // 1. Try with operator_name column
+  const payload: Record<string, unknown> = {};
+  if (data.name !== undefined) payload.name = data.name;
+  if (data.description !== undefined) payload.description = data.description;
+  if (resolvedOperatorId !== undefined) payload.operator_id = resolvedOperatorId;
+  if (rawName !== undefined) payload.operator_name = rawName && rawName !== "미지정" ? rawName : null;
 
   let { data: updatedBooth, error } = await supabase
     .from("booths")
@@ -160,8 +172,18 @@ export async function updateBoothAction(id: string, data: Partial<BoothData>) {
     .select()
     .single();
 
+  // 2. If operator_name column doesn't exist, fallback to description encoding
   if (error && error.message?.includes("operator_name")) {
     delete payload.operator_name;
+    if (rawName !== undefined || data.description !== undefined) {
+      let currentDesc = data.description;
+      if (currentDesc === undefined) {
+        const { data: cur } = await supabase.from("booths").select("description").eq("id", id).single();
+        currentDesc = cur?.description || "";
+      }
+      payload.description = encodeBoothDescription(currentDesc, rawName);
+    }
+
     const retry = await supabase
       .from("booths")
       .update(payload)
@@ -180,7 +202,7 @@ export async function updateBoothAction(id: string, data: Partial<BoothData>) {
   await recordLogAction(
     updatedBooth.event_id,
     "update_booth",
-    `부스 수정 완료 (ID: ${id}): 이름='${updatedBooth.name}', 담당='${rawName || "미지정"}', 설명='${updatedBooth.description || ""}'`
+    `부스 수정 완료 (ID: ${id}): 이름='${updatedBooth.name}', 담당='${rawName || "미지정"}', 설명='${data.description || ""}'`
   );
 
   revalidatePath("/booths");
@@ -224,10 +246,6 @@ interface EventJoined {
   allow_double_participation: boolean;
 }
 
-interface OperatorJoined {
-  name: string;
-}
-
 /**
  * Fetch booth details along with parent event policies, operator name, and participation counts
  */
@@ -255,8 +273,7 @@ export async function getBoothDetailAction(id: string) {
   }
 
   const eventData = data.event as unknown as EventJoined | null;
-  const operatorData = data.operator as unknown as OperatorJoined | null;
-  const resolvedOperatorName = data.operator_name || (operatorData ? operatorData.name : "미지정");
+  const { operator_name, description } = parseBoothOperator(data);
 
   return {
     success: true,
@@ -264,12 +281,12 @@ export async function getBoothDetailAction(id: string) {
       id: data.id,
       event_id: data.event_id,
       name: data.name,
-      description: data.description,
+      description: description,
       operator_id: data.operator_id,
       created_at: data.created_at,
       event_name: eventData ? eventData.name : "알 수 없는 행사",
       allow_double_participation: eventData ? eventData.allow_double_participation : false,
-      operator_name: resolvedOperatorName,
+      operator_name: operator_name,
       participant_count: count || 0,
     },
   };

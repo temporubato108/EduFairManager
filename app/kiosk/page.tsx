@@ -258,9 +258,9 @@ function KioskContent() {
           });
 
           const scanConfig = {
-            fps: 30, // 30 FPS for buttery smooth motion and instant decoding
+            fps: 25,
             qrbox: (width: number, height: number) => {
-              const size = Math.floor(Math.min(width, height) * 0.9);
+              const size = Math.floor(Math.min(width, height) * 0.95);
               return { width: size, height: size };
             },
             aspectRatio: 1.0,
@@ -286,81 +286,13 @@ function KioskContent() {
 
           if (!isMounted) return;
 
-          // 3. Multi-tier camera startup: Request FHD (1080p) rear camera with fallback
-          const highDefConstraints: MediaTrackConstraints = {
-            facingMode: "environment",
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          };
-
-          try {
-            await html5Qrcode.start(
-              highDefConstraints,
-              scanConfig,
-              onScanSuccess,
-              () => {}
-            );
-          } catch (firstErr) {
-            console.warn("High-def rear camera attempt failed, trying standard fallback:", firstErr);
-            if (!isMounted) return;
-            try {
-              await html5Qrcode.start(
-                { facingMode: "environment" },
-                scanConfig,
-                onScanSuccess,
-                () => {}
-              );
-            } catch (fallbackErr) {
-              console.warn("Rear camera failed, trying user camera fallback:", fallbackErr);
-              if (!isMounted) return;
-              await html5Qrcode.start(
-                { facingMode: "user" },
-                scanConfig,
-                onScanSuccess,
-                () => {}
-              );
-            }
-          }
-
-          // 4. Safely apply Hardware Zoom (1.8x), Continuous Auto-Focus & Auto-Exposure
-          try {
-            const videoElem = document.querySelector("#kiosk-reader video") as HTMLVideoElement | null;
-            if (videoElem && videoElem.srcObject instanceof MediaStream) {
-              const track = videoElem.srcObject.getVideoTracks()[0];
-              if (track && track.getCapabilities && track.applyConstraints) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const capabilities = track.getCapabilities() as any;
-                const advancedConstraints: Record<string, unknown>[] = [];
-
-                // Continuous Auto Focus
-                if (capabilities.focusMode && Array.isArray(capabilities.focusMode) && capabilities.focusMode.includes("continuous")) {
-                  advancedConstraints.push({ focusMode: "continuous" });
-                }
-                // Continuous Auto Exposure
-                if (capabilities.exposureMode && Array.isArray(capabilities.exposureMode) && capabilities.exposureMode.includes("continuous")) {
-                  advancedConstraints.push({ exposureMode: "continuous" });
-                }
-                // Smart Hardware Zoom (1.8x for optimal 20-30cm focal distance)
-                if (capabilities.zoom && typeof capabilities.zoom === "object") {
-                  const minZ = capabilities.zoom.min || 1;
-                  const maxZ = capabilities.zoom.max || 1;
-                  if (maxZ > 1.2) {
-                    const targetZoom = Math.min(Math.max(1.8, minZ), maxZ);
-                    advancedConstraints.push({ zoom: targetZoom });
-                  }
-                }
-
-                if (advancedConstraints.length > 0) {
-                  await track.applyConstraints({
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    advanced: advancedConstraints as any,
-                  });
-                }
-              }
-            }
-          } catch (e) {
-            console.warn("Could not apply hardware zoom/focus constraints", e);
-          }
+          // 3. Guaranteed reliable startup using standard W3C environment facingMode
+          await html5Qrcode.start(
+            { facingMode: "environment" },
+            scanConfig,
+            onScanSuccess,
+            () => {}
+          );
 
           if (isMounted) {
             setCameraLoading(false);
@@ -451,6 +383,8 @@ function KioskContent() {
           aspect-ratio: 1 / 1 !important;
           object-fit: cover !important;
           border-radius: inherit !important;
+          transform: scale(1.3) !important;
+          transform-origin: center center !important;
           image-rendering: -webkit-optimize-contrast !important;
         }
         #kiosk-reader img {

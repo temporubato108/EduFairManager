@@ -62,7 +62,7 @@ import {
   StudentInput,
 } from "./actions";
 import * as XLSX from "xlsx";
-import { PDFDocument } from "pdf-lib";
+import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
 
 interface EventOption {
@@ -562,15 +562,21 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     XLSX.writeFile(wb, "학생_업로드_양식.xlsx");
   };
 
-  // High-Definition Canvas-to-PDF Exporter (3x4 Grid, 12 Cards per A4 Page)
+  // High-Definition Canvas-to-PDF Exporter using jsPDF (3x4 Grid, 12 Cards per A4 Page)
   const handleExportPdf = async () => {
-    if (students.length === 0 || !selectedEventId) return;
+    const targetStudents = filteredStudents.length > 0 ? filteredStudents : students;
+    if (targetStudents.length === 0 || !selectedEventId) return;
 
     setPdfBuilding(true);
-    setPdfStatus("PDF 문서 초기화 중...");
+    setPdfStatus("PDF 문서 준비 중...");
 
     try {
-      const pdfDoc = await PDFDocument.create();
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "pt",
+        format: "a4",
+      });
+
       const pageWidth = 595.28;
       const pageHeight = 841.89;
 
@@ -583,7 +589,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
       const cardWidth = (canvasWidth - margin * 2) / cols;
       const cardHeight = (canvasHeight - margin * 2) / rows;
       const itemsPerPage = cols * rows; // 12
-      const totalPages = Math.ceil(students.length / itemsPerPage);
+      const totalPages = Math.ceil(targetStudents.length / itemsPerPage);
 
       const activeEvent = initialEvents.find((e) => e.id === selectedEventId);
       const activeEventName = activeEvent?.name || "행사";
@@ -596,18 +602,6 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("캔버스 렌더러를 초기화할 수 없습니다.");
 
-      // Helper: Fast dataURL to Uint8Array converter
-      const dataUrlToUint8Array = (dataUrl: string): Uint8Array => {
-        const base64 = dataUrl.split(",")[1];
-        const binaryString = window.atob(base64);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        return bytes;
-      };
-
       // Temporary offscreen canvas for QR rendering
       const qrCanvas = document.createElement("canvas");
 
@@ -618,7 +612,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-        const pageStudents = students.slice(p * itemsPerPage, (p + 1) * itemsPerPage);
+        const pageStudents = targetStudents.slice(p * itemsPerPage, (p + 1) * itemsPerPage);
 
         for (let i = 0; i < pageStudents.length; i++) {
           const student = pageStudents[i];
@@ -690,31 +684,16 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
           ctx.fillText("EduFair 참여 QR", innerX + innerW - 14, innerY + innerH - 12);
         }
 
-        // Export current canvas page to JPEG
+        // Add page to jsPDF
+        if (p > 0) {
+          doc.addPage();
+        }
         const pageJpgDataUrl = canvas.toDataURL("image/jpeg", 0.92);
-        const pageJpgBytes = dataUrlToUint8Array(pageJpgDataUrl);
-        const pdfImage = await pdfDoc.embedJpg(pageJpgBytes);
-
-        const pdfPage = pdfDoc.addPage([pageWidth, pageHeight]);
-        pdfPage.drawImage(pdfImage, {
-          x: 0,
-          y: 0,
-          width: pageWidth,
-          height: pageHeight,
-        });
+        doc.addImage(pageJpgDataUrl, "JPEG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
       }
 
-      setPdfStatus("PDF 인코딩 및 파일 저장 중...");
-      const pdfBytes = await pdfDoc.save();
-
-      // Trigger instant browser download
-      const blob = new Blob([pdfBytes as unknown as BlobPart], { type: "application/pdf" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `students_qr_${cleanEventName}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      setPdfStatus("PDF 파일 다운로드 중...");
+      doc.save(`students_qr_${cleanEventName}.pdf`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("PDF generation error:", err);

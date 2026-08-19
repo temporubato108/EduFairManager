@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { PDFDocument } from "pdf-lib";
+import { jsPDF } from "jspdf";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -304,15 +304,20 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
     printWindow.document.close();
   };
 
-  // Advanced High-Definition Canvas-to-PDF Exporter for Booth Signs
+  // Advanced High-Definition Canvas-to-PDF Exporter using jsPDF for Booth Signs
   const handleExportBoothsPdf = async () => {
     if (booths.length === 0 || !selectedEventId) return;
 
     setPdfBuilding(true);
-    setPdfStatus("PDF 문서 초기화 중...");
+    setPdfStatus("PDF 문서 준비 중...");
 
     try {
-      const pdfDoc = await PDFDocument.create();
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "pt",
+        format: "a4",
+      });
+
       const pageWidth = 595.28;
       const pageHeight = 841.89;
 
@@ -330,18 +335,6 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
       canvas.height = canvasHeight;
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("캔버스 렌더러를 초기화할 수 없습니다.");
-
-      // Helper: Fast dataURL to Uint8Array converter
-      const dataUrlToUint8Array = (dataUrl: string): Uint8Array => {
-        const base64 = dataUrl.split(",")[1];
-        const binaryString = window.atob(base64);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        return bytes;
-      };
 
       // Temporary offscreen canvas for QR rendering
       const qrCanvas = document.createElement("canvas");
@@ -432,31 +425,16 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
         ctx.fillText("스마트폰 카메라로 이 QR 코드를 비추어 접속하면", canvasWidth / 2, guideY + 105);
         ctx.fillText("본 부스의 참여 기록 전용 키오스크 화면으로 자동 연결됩니다.", canvasWidth / 2, guideY + 145);
 
-        // Export canvas to JPEG
+        // Add page to jsPDF
+        if (i > 0) {
+          doc.addPage();
+        }
         const pageJpgDataUrl = canvas.toDataURL("image/jpeg", 0.92);
-        const pageJpgBytes = dataUrlToUint8Array(pageJpgDataUrl);
-        const pdfImage = await pdfDoc.embedJpg(pageJpgBytes);
-
-        const pdfPage = pdfDoc.addPage([pageWidth, pageHeight]);
-        pdfPage.drawImage(pdfImage, {
-          x: 0,
-          y: 0,
-          width: pageWidth,
-          height: pageHeight,
-        });
+        doc.addImage(pageJpgDataUrl, "JPEG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
       }
 
-      setPdfStatus("PDF 인코딩 및 파일 저장 중...");
-      const pdfBytes = await pdfDoc.save();
-
-      // Trigger instant browser download
-      const blob = new Blob([pdfBytes as unknown as BlobPart], { type: "application/pdf" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `booths_qr_${cleanEventName}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      setPdfStatus("PDF 파일 다운로드 중...");
+      doc.save(`booths_qr_${cleanEventName}.pdf`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Booth PDF generation error:", err);

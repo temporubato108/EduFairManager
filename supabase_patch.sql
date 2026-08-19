@@ -14,7 +14,10 @@ alter table public.logs alter column action drop not null;
 -- 3. Fix settings table
 alter table public.settings alter column value type text using value::text;
 
--- 4. Fix RLS policies for Kiosk and public access
+-- 4. Fix booths table to support custom typed operator name
+alter table public.booths add column if not exists operator_name text;
+
+-- 5. Fix RLS policies for Kiosk and public access
 drop policy if exists "Allow authenticated operators to insert participations" on public.participations;
 create policy "Allow insert participations" on public.participations for insert with check (true);
 

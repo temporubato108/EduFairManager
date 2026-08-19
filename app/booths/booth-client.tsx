@@ -667,18 +667,13 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
                 <Label htmlFor="c-operator" className="text-slate-600 dark:text-[#98989D]">담당 운영교사 (선택)</Label>
                 <Input
                   id="c-operator"
-                  list="teachers-datalist"
+                  type="text"
                   placeholder="예: 홍길동"
                   value={formOperatorName}
                   onChange={(e) => setFormOperatorName(e.target.value)}
                   disabled={isPending}
                   className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
                 />
-                <datalist id="teachers-datalist">
-                  {teachers.map((t) => (
-                    <option key={t.id} value={t.name} label={`${t.name} (${t.email})`} />
-                  ))}
-                </datalist>
               </div>
 
               <DialogFooter className="pt-4">
@@ -754,7 +749,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
                 <Label htmlFor="e-operator" className="text-slate-600 dark:text-[#98989D]">담당 운영교사 (선택)</Label>
                 <Input
                   id="e-operator"
-                  list="teachers-datalist"
+                  type="text"
                   placeholder="예: 홍길동"
                   value={formOperatorName}
                   onChange={(e) => setFormOperatorName(e.target.value)}

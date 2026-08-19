@@ -1,7 +1,6 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 
 interface RecordParticipationResponse {
   success?: boolean;
@@ -16,7 +15,7 @@ interface EventJoined {
 }
 
 /**
- * Validates student QR content and records booth participation with duplicate checking and event logging
+ * Validates student QR content and records booth participation with parallelized duplicate checking and async event logging for high-speed scanning
  */
 export async function recordParticipationAction(
   boothId: string,
@@ -47,66 +46,64 @@ export async function recordParticipationAction(
 
   const supabase = createAdminClient();
 
-  // 2. Fetch Booth details and parent Event policies
-  const { data: booth, error: boothError } = await supabase
-    .from("booths")
-    .select("*, event:events(name, allow_double_participation)")
-    .eq("id", boothId)
-    .is("deleted_at", null)
-    .single();
-
-  if (boothError || !booth) {
-    return { error: "부스 정보를 찾을 수 없거나 삭제된 부스입니다." };
-  }
-
-  // 3. Verify event matching
-  if (booth.event_id !== eventId) {
-    return { error: "현재 부스가 속한 행사와 학생 QR의 행사가 일치하지 않습니다." };
-  }
-
-  // 4. Fetch Student details
-  const { data: student, error: studentError } = await supabase
-    .from("students")
-    .select("*")
-    .eq("id", studentId)
-    .eq("event_id", eventId)
-    .is("deleted_at", null)
-    .single();
-
-  if (studentError || !student) {
-    return { error: "해당 행사에 등록되지 않았거나 삭제된 학생입니다." };
-  }
-
-  const eventData = booth.event as unknown as EventJoined | null;
-  const allowDouble = eventData ? eventData.allow_double_participation : false;
-
-  // 5. Check duplicate participation if policy is set to false (forbidden)
-  if (!allowDouble) {
-    const { data: existing, error: checkError } = await supabase
+  // 2. Fetch Booth, Student, and Existing Participation concurrently for maximum speed
+  const [boothRes, studentRes, existingRes] = await Promise.all([
+    supabase
+      .from("booths")
+      .select("*, event:events(name, allow_double_participation)")
+      .eq("id", boothId)
+      .is("deleted_at", null)
+      .single(),
+    supabase
+      .from("students")
+      .select("id, event_id, name, student_number")
+      .eq("id", studentId)
+      .eq("event_id", eventId)
+      .is("deleted_at", null)
+      .single(),
+    supabase
       .from("participations")
       .select("id")
       .eq("booth_id", boothId)
       .eq("student_id", studentId)
-      .limit(1);
+      .limit(1),
+  ]);
 
-    if (checkError) {
-      return { error: "중복 체크 쿼리 중 오류가 발생했습니다." };
-    }
+  // Check Booth
+  if (boothRes.error || !boothRes.data) {
+    return { error: "부스 정보를 찾을 수 없거나 삭제된 부스입니다." };
+  }
+  const booth = boothRes.data;
 
-    if (existing && existing.length > 0) {
-      // Log duplicate scan error
-      const { recordLogAction } = await import("@/app/logs/actions");
-      await recordLogAction(
+  // Verify event matching
+  if (booth.event_id !== eventId) {
+    return { error: "현재 부스가 속한 행사와 학생 QR의 행사가 일치하지 않습니다." };
+  }
+
+  // Check Student
+  if (studentRes.error || !studentRes.data) {
+    return { error: "해당 행사에 등록되지 않았거나 삭제된 학생입니다." };
+  }
+  const student = studentRes.data;
+
+  // Check duplicate participation if policy is set to false (forbidden)
+  const eventData = booth.event as unknown as EventJoined | null;
+  const allowDouble = eventData ? eventData.allow_double_participation : false;
+
+  if (!allowDouble && existingRes.data && existingRes.data.length > 0) {
+    // Log duplicate scan error in background (non-blocking)
+    import("@/app/logs/actions").then(({ recordLogAction }) => {
+      recordLogAction(
         eventId,
         "scan_duplicate_error",
         `${student.student_number} ${student.name} 학생 중복 스캔 시도 차단 (중복 금지 정책).`
-      );
+      ).catch(() => {});
+    });
 
-      return { error: "이미 이 부스에 참여 완료한 학생입니다." };
-    }
+    return { error: "이미 이 부스에 참여 완료한 학생입니다." };
   }
 
-  // 6. Record participation
+  // 3. Record participation
   const { error: insertError } = await supabase.from("participations").insert([
     {
       event_id: eventId,
@@ -119,17 +116,15 @@ export async function recordParticipationAction(
     return { error: `참여 기록 등록 실패: ${insertError.message}` };
   }
 
-  // 7. Log success scan
-  const { recordLogAction } = await import("@/app/logs/actions");
-  await recordLogAction(
-    eventId,
-    "scan_success",
-    `${student.student_number} ${student.name} 학생 스캔 성공 (참여 기록 등록 완료).`
-  );
+  // 4. Log success scan in background without delaying user feedback
+  import("@/app/logs/actions").then(({ recordLogAction }) => {
+    recordLogAction(
+      eventId,
+      "scan_success",
+      `${student.student_number} ${student.name} 학생 스캔 성공 (참여 기록 등록 완료).`
+    ).catch(() => {});
+  });
 
-  // Revalidate routes
-  revalidatePath("/kiosk");
-  
   return {
     success: true,
     studentName: student.name,

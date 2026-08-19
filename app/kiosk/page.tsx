@@ -52,7 +52,6 @@ function KioskContent() {
   const [participantCount, setParticipantCount] = useState(0);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [scannedStudent, setScannedStudent] = useState<{ name: string; number: string } | null>(null);
-  const [countdown, setCountdown] = useState(1);
   
   // Manual Input State
   const [manualInput, setManualInput] = useState("");
@@ -174,7 +173,6 @@ function KioskContent() {
       setScanState("error");
     } finally {
       setLoading(false);
-      setCountdown(1);
     }
   }, [boothId, playSuccessSound, playErrorSound]);
 
@@ -235,25 +233,19 @@ function KioskContent() {
 
   // Countdown timer for 1-second auto-return
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let timer: NodeJS.Timeout | null = null;
 
     if (scanState === "success" || scanState === "error") {
-      interval = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            // Automatically return to scanning mode (continuous scanning)
-            setScanState("scanning");
-            setResultMessage(null);
-            setScannedStudent(null);
-            return 1;
-          }
-          return prev - 1;
-        });
+      timer = setTimeout(() => {
+        // Automatically return to scanning mode (continuous scanning)
+        setScanState("scanning");
+        setResultMessage(null);
+        setScannedStudent(null);
       }, 1000);
     }
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (timer) clearTimeout(timer);
     };
   }, [scanState]);
 
@@ -288,7 +280,7 @@ function KioskContent() {
 
   return (
     <div className="flex h-screen max-h-screen flex-col bg-[#121212] text-white select-none overflow-hidden">
-      {/* Global CSS for Html5Qrcode Fullscreen Camera Stream */}
+      {/* Global CSS for Html5Qrcode Fullscreen Camera Stream & Countdown */}
       <style jsx global>{`
         #kiosk-reader {
           width: 100% !important;
@@ -320,6 +312,18 @@ function KioskContent() {
         }
         #kiosk-reader__dashboard {
           display: none !important;
+        }
+        @keyframes countdownShrink {
+          0% {
+            width: 100%;
+          }
+          100% {
+            width: 0%;
+          }
+        }
+        .animate-shrink-1s {
+          animation: countdownShrink 1000ms linear forwards !important;
+          will-change: width;
         }
       `}</style>
 
@@ -529,13 +533,10 @@ function KioskContent() {
                   <div className="w-full space-y-2">
                     <div className="flex justify-between items-center text-[10px] text-[#98989D]">
                       <span>카메라 자동 복귀</span>
-                      <span className="font-mono font-bold text-white">{countdown}초</span>
+                      <span className="font-mono font-bold text-white">1초</span>
                     </div>
                     <div className="w-full h-1.5 bg-[#121212] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-[#32D74B] rounded-full transition-all duration-1000 ease-linear"
-                        style={{ width: `${(countdown / 1) * 100}%` }}
-                      ></div>
+                      <div className="h-full bg-[#32D74B] rounded-full animate-shrink-1s"></div>
                     </div>
                   </div>
                 </CardContent>
@@ -563,13 +564,10 @@ function KioskContent() {
                   <div className="w-full space-y-2">
                     <div className="flex justify-between items-center text-[10px] text-[#98989D]">
                       <span>카메라 자동 복귀</span>
-                      <span className="font-mono font-bold text-white">{countdown}초</span>
+                      <span className="font-mono font-bold text-white">1초</span>
                     </div>
                     <div className="w-full h-1.5 bg-[#121212] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-[#FF453A] rounded-full transition-all duration-1000 ease-linear"
-                        style={{ width: `${(countdown / 1) * 100}%` }}
-                      ></div>
+                      <div className="h-full bg-[#FF453A] rounded-full animate-shrink-1s"></div>
                     </div>
                   </div>
                 </CardContent>

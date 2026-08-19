@@ -18,3 +18,29 @@ export function isValidSchoolLogo(logo?: string | null): boolean {
     trimmed.startsWith("/")
   );
 }
+
+export function cleanSchoolName(name?: string | null): string {
+  if (!name || typeof name !== "string") return "EduFair Admin";
+  let cleaned = name.trim();
+  try {
+    if (
+      (cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+      (cleaned.startsWith("'") && cleaned.endsWith("'"))
+    ) {
+      cleaned = JSON.parse(cleaned);
+    }
+  } catch {
+    // ignore JSON parse error
+  }
+  cleaned = String(cleaned)
+    .replace(/^["'\\/]+|["'\\/]+$/g, "")
+    .replace(/\\"/g, '"')
+    .replace(/^\\/, "")
+    .trim();
+
+  while (cleaned.startsWith("\\") || cleaned.startsWith('"') || cleaned.startsWith("'")) {
+    cleaned = cleaned.substring(1).trim();
+  }
+
+  return cleaned || "EduFair Admin";
+}

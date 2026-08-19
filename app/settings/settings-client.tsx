@@ -25,14 +25,14 @@ import {
   QrCode,
 } from "lucide-react";
 import { saveSettingsAction, SystemSettings } from "./actions";
-import { isValidSchoolLogo } from "@/lib/utils";
+import { isValidSchoolLogo, cleanSchoolName } from "@/lib/utils";
 
 interface SettingsClientPageProps {
   initialSettings: SystemSettings;
 }
 
 export function SettingsClientPage({ initialSettings }: SettingsClientPageProps) {
-  const [schoolName, setSchoolName] = useState(initialSettings.school_name);
+  const [schoolName, setSchoolName] = useState(cleanSchoolName(initialSettings.school_name));
   const [schoolLogo, setSchoolLogo] = useState(isValidSchoolLogo(initialSettings.school_logo) ? initialSettings.school_logo : "");
   const [imgError, setImgError] = useState(false);
   const [qrSize, setQrSize] = useState(initialSettings.qr_size);

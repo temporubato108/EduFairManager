@@ -12,7 +12,7 @@ export interface SystemSettings {
   default_allow_double_participation: string;
 }
 
-import { isValidSchoolLogo } from "@/lib/utils";
+import { isValidSchoolLogo, cleanSchoolName } from "@/lib/utils";
 
 export async function getSettingsAction(): Promise<SystemSettings> {
   const defaultSettings: SystemSettings = {
@@ -54,6 +54,8 @@ export async function getSettingsAction(): Promise<SystemSettings> {
       });
     }
 
+    settings.school_name = cleanSchoolName(settings.school_name);
+
     if (!isValidSchoolLogo(settings.school_logo)) {
       settings.school_logo = "";
     }
@@ -70,10 +72,14 @@ export async function saveSettingsAction(settings: Partial<SystemSettings>) {
   try {
     const supabase = await createClient();
 
+    if (settings.school_name !== undefined) {
+      settings.school_name = cleanSchoolName(settings.school_name);
+    }
+
     // Prepare upsert payload
     const entries = Object.entries(settings);
     for (const [key, rawValue] of entries) {
-      const cleanValue = typeof rawValue === "string" ? rawValue.trim() : String(rawValue || "");
+      const cleanValue = typeof rawValue === "string" ? rawValue.trim().replace(/^["'\\]+|["'\\]+$/g, "") : String(rawValue || "");
       const { error } = await supabase
         .from("settings")
         .upsert({ key, value: cleanValue }, { onConflict: "key" });

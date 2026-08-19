@@ -91,7 +91,7 @@ function Select({
 
   return (
     <SelectContext.Provider value={contextValue}>
-      <div ref={selectContainerRef} className="relative inline-block w-full text-left">
+      <div ref={selectContainerRef} className={cn("relative inline-block w-full text-left", open ? "z-50" : "z-10")}>
         {children}
       </div>
     </SelectContext.Provider>
@@ -193,7 +193,7 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
       <div
         ref={ref}
         className={cn(
-          "absolute left-0 top-full z-[100] mt-1 max-h-64 min-w-full w-max max-w-[24rem] sm:max-w-md overflow-x-hidden overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 text-slate-800 shadow-2xl dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 transition-all duration-150",
+          "absolute left-0 top-full z-[9999] mt-1.5 max-h-64 min-w-full w-max max-w-[24rem] sm:max-w-md overflow-x-hidden overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 text-slate-800 shadow-2xl dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 transition-all duration-150",
           open ? "block opacity-100 scale-100 pointer-events-auto" : "hidden opacity-0 scale-95 pointer-events-none",
           className
         )}

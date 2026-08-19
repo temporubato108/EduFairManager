@@ -24,7 +24,7 @@ import { supabase } from "@/lib/supabase/client";
 
 import { getCachedSettings, setCachedSettings } from "@/lib/cache";
 
-import { isValidSchoolLogo } from "@/lib/utils";
+import { isValidSchoolLogo, cleanSchoolName } from "@/lib/utils";
 
 interface SidebarProps {
   onClose?: () => void;
@@ -44,7 +44,7 @@ export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const cached = getCachedSettings();
-  const [schoolName, setSchoolName] = useState(cached ? cached.schoolName : "EduFair Admin");
+  const [schoolName, setSchoolName] = useState(cached ? cleanSchoolName(cached.schoolName) : "EduFair Admin");
   const [schoolLogo, setSchoolLogo] = useState(cached && isValidSchoolLogo(cached.schoolLogo) ? cached.schoolLogo : "");
   const [imgError, setImgError] = useState(false);
 
@@ -52,7 +52,7 @@ export function Sidebar({ onClose }: SidebarProps) {
     async function loadSettings() {
       const existing = getCachedSettings();
       if (existing) {
-        setSchoolName(existing.schoolName);
+        setSchoolName(cleanSchoolName(existing.schoolName));
         setSchoolLogo(isValidSchoolLogo(existing.schoolLogo) ? existing.schoolLogo : "");
         return;
       }
@@ -64,7 +64,7 @@ export function Sidebar({ onClose }: SidebarProps) {
         if (data) {
           const nameRow = data.find((r) => r.key === "school_name");
           const logoRow = data.find((r) => r.key === "school_logo");
-          const name = nameRow?.value || "EduFair Admin";
+          const name = cleanSchoolName(nameRow?.value || "EduFair Admin");
           
           let rawLogo = logoRow?.value;
           if (typeof rawLogo === "string") {
@@ -115,7 +115,7 @@ export function Sidebar({ onClose }: SidebarProps) {
             </div>
           )}
           <span className="font-bold tracking-tight text-slate-800 dark:text-slate-100 truncate max-w-[140px]">
-            {schoolName}
+            {cleanSchoolName(schoolName)}
           </span>
         </Link>
         {onClose && (

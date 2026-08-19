@@ -287,28 +287,63 @@ function KioskContent() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#121212] text-white select-none">
+    <div className="flex h-screen max-h-screen flex-col bg-[#121212] text-white select-none overflow-hidden">
+      {/* Global CSS for Html5Qrcode Fullscreen Camera Stream */}
+      <style jsx global>{`
+        #kiosk-reader {
+          width: 100% !important;
+          height: 100% !important;
+          border: none !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          background: #000 !important;
+          position: relative !important;
+        }
+        #kiosk-reader video {
+          width: 100% !important;
+          height: 100% !important;
+          max-height: 100% !important;
+          object-fit: cover !important;
+          border-radius: inherit !important;
+        }
+        #kiosk-reader img {
+          display: none !important;
+        }
+        #kiosk-reader__scan_region {
+          width: 100% !important;
+          height: 100% !important;
+          min-height: 100% !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+        #kiosk-reader__dashboard {
+          display: none !important;
+        }
+      `}</style>
+
       {/* Kiosk Header */}
-      <header className="flex h-16 items-center justify-between border-b border-[#2C2C2E] bg-[#1E1E1E] px-6 z-10">
+      <header className="flex h-14 sm:h-16 items-center justify-between border-b border-[#2C2C2E] bg-[#1E1E1E] px-4 sm:px-6 z-10 shrink-0">
         <div className="flex items-center gap-2">
-          <QrCode className="h-6 w-6 text-indigo-400" />
-          <span className="font-bold tracking-tight text-indigo-400">EduFair Kiosk</span>
+          <QrCode className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-400" />
+          <span className="font-bold tracking-tight text-indigo-400 text-sm sm:text-base">EduFair Kiosk</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setMuted(!muted)}
-            className="text-[#98989D] hover:bg-[#2C2C2E] hover:text-white animate-fade-in"
+            className="text-[#98989D] hover:bg-[#2C2C2E] hover:text-white h-8 w-8 sm:h-9 sm:w-9"
             title={muted ? "소리 켜기" : "음소거"}
           >
-            {muted ? <VolumeX className="h-4.5 w-4.5" /> : <Volume2 className="h-4.5 w-4.5 text-[#32D74B]" />}
+            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4 text-[#32D74B]" />}
           </Button>
 
           {booth && scanState === "scanning" && (
             <div className="flex items-center gap-1.5 text-xs text-[#32D74B]">
               <Radio className="h-3.5 w-3.5 animate-ping text-[#32D74B]" />
-              <span className="font-medium">실시간 스캔 대기 중</span>
+              <span className="font-medium hidden sm:inline">스캔 대기 중</span>
             </div>
           )}
 
@@ -317,7 +352,7 @@ function KioskContent() {
             size="icon"
             onClick={handleLogout}
             disabled={isPending}
-            className="text-[#98989D] hover:bg-[#2C2C2E] hover:text-white"
+            className="text-[#98989D] hover:bg-[#2C2C2E] hover:text-white h-8 w-8 sm:h-9 sm:w-9"
             title="로그아웃"
           >
             {isPending ? (
@@ -330,7 +365,7 @@ function KioskContent() {
       </header>
 
       {/* Main Kiosk Area */}
-      <main className="flex flex-1 items-center justify-center p-6 relative">
+      <main className="flex flex-1 flex-col items-center justify-center p-3 sm:p-6 relative overflow-hidden h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)]">
         {error ? (
           <Card className="w-full max-w-lg border-rose-950 bg-[#1E1E1E] text-white shadow-xl">
             <CardHeader className="text-center">
@@ -349,11 +384,11 @@ function KioskContent() {
             </CardContent>
           </Card>
         ) : booth ? (
-          <div className="w-full max-w-md space-y-6">
+          <div className="w-full h-full max-w-lg flex flex-col justify-center mx-auto">
             
             {/* 1. Kiosk Dashboard Mode (Idle State) */}
             {scanState === "idle" && (
-              <Card className="border-[#2C2C2E] bg-[#1E1E1E] text-white shadow-xl">
+              <Card className="border-[#2C2C2E] bg-[#1E1E1E] text-white shadow-xl max-w-md mx-auto w-full my-auto">
                 <CardHeader className="text-center pb-2">
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-950 text-indigo-400 border border-indigo-800/30 mb-2">
                     <Store className="h-6 w-6" />
@@ -404,75 +439,78 @@ function KioskContent() {
               </Card>
             )}
 
-            {/* 2. Camera Scanning HUD View */}
+            {/* 2. Camera Scanning Fullscreen HUD View */}
             {scanState === "scanning" && (
-              <div className="space-y-4 animate-fade-in">
+              <div className="flex flex-col h-full w-full justify-between gap-2.5 flex-1 animate-fade-in py-1">
                 {/* Mini Metric header */}
-                <div className="flex items-center justify-between bg-[#1E1E1E] px-4 py-3 rounded-2xl border border-[#2C2C2E]">
-                  <div>
-                    <h2 className="text-sm font-bold text-white tracking-wide">{booth.name}</h2>
-                    <p className="text-[10px] text-[#98989D] font-mono mt-0.5">{booth.event_name}</p>
+                <div className="flex items-center justify-between bg-[#1E1E1E]/90 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-[#2C2C2E] shadow-md shrink-0">
+                  <div className="min-w-0 pr-2">
+                    <h2 className="text-sm font-bold text-white tracking-wide truncate">{booth.name}</h2>
+                    <p className="text-[10px] text-slate-400 font-mono truncate">{booth.event_name}</p>
                   </div>
-                  <div className="flex items-baseline gap-0.5 bg-[#121212] px-3 py-1 rounded-xl border border-[#2C2C2E] font-mono">
-                    <span className="text-xs text-[#98989D] mr-1">스캔수</span>
+                  <div className="flex items-baseline gap-1 bg-[#121212] px-3 py-1 rounded-xl border border-[#2C2C2E] font-mono shrink-0">
+                    <span className="text-xs text-slate-400">스캔</span>
                     <span className="text-base font-bold text-indigo-400">{participantCount}</span>
                     <span className="text-[10px] text-slate-500">명</span>
                   </div>
                 </div>
 
-                {/* Viewport Frame */}
-                <div className="relative aspect-square w-full rounded-3xl overflow-hidden border-4 border-indigo-500/60 bg-black shadow-lg shadow-indigo-950/20">
+                {/* Viewport Frame - Fills Available Height */}
+                <div className="relative flex-1 w-full rounded-2xl sm:rounded-3xl overflow-hidden border-2 sm:border-4 border-indigo-500/60 bg-black shadow-2xl flex items-center justify-center min-h-[50vh]">
                   <div id="kiosk-reader" className="w-full h-full object-cover"></div>
                   
                   {/* Neon HUD overlay elements */}
-                  <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-8">
+                  <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-6 sm:p-8">
                     <div className="flex justify-between">
-                      <div className="w-6 h-6 border-t-4 border-l-4 border-indigo-400"></div>
-                      <div className="w-6 h-6 border-t-4 border-r-4 border-indigo-400"></div>
+                      <div className="w-8 h-8 border-t-4 border-l-4 border-indigo-400 rounded-tl-lg"></div>
+                      <div className="w-8 h-8 border-t-4 border-r-4 border-indigo-400 rounded-tr-lg"></div>
                     </div>
                     {/* Scanner scanning bar indicator */}
-                    <div className="w-full h-0.5 bg-indigo-400 opacity-40 shadow-glow animate-scan-line"></div>
+                    <div className="w-full h-0.5 bg-indigo-400 opacity-60 shadow-[0_0_12px_#818cf8] animate-scan-line"></div>
                     <div className="flex justify-between">
-                      <div className="w-6 h-6 border-b-4 border-l-4 border-indigo-400"></div>
-                      <div className="w-6 h-6 border-b-4 border-r-4 border-indigo-400"></div>
+                      <div className="w-8 h-8 border-b-4 border-l-4 border-indigo-400 rounded-bl-lg"></div>
+                      <div className="w-8 h-8 border-b-4 border-r-4 border-indigo-400 rounded-br-lg"></div>
                     </div>
                   </div>
                 </div>
 
-                {/* Manual testing input box */}
-                <form onSubmit={handleManualSubmit} className="flex gap-2 items-center bg-[#1E1E1E] p-3 rounded-2xl border border-[#2C2C2E]">
-                  <Input
-                    type="text"
-                    placeholder="학반 및 번호:이름 직접 입력"
-                    value={manualInput}
-                    onChange={(e) => setManualInput(e.target.value)}
-                    disabled={manualPending}
-                    className="flex-1 bg-[#121212] border-[#2C2C2E] text-white text-xs placeholder:text-slate-500 h-9"
-                  />
-                  <Button
-                    type="submit"
-                    disabled={manualPending || !manualInput.trim()}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs h-9 px-4 rounded-xl"
-                  >
-                    입력
-                  </Button>
-                </form>
+                {/* Bottom Controls Area */}
+                <div className="space-y-2 shrink-0">
+                  {/* Manual testing input box */}
+                  <form onSubmit={handleManualSubmit} className="flex gap-2 items-center bg-[#1E1E1E] p-2 sm:p-2.5 rounded-2xl border border-[#2C2C2E]">
+                    <Input
+                      type="text"
+                      placeholder="학번/QR 직접 입력 (예: 60101)"
+                      value={manualInput}
+                      onChange={(e) => setManualInput(e.target.value)}
+                      disabled={manualPending}
+                      className="flex-1 bg-[#121212] border-[#2C2C2E] text-white text-xs placeholder:text-slate-500 h-9"
+                    />
+                    <Button
+                      type="submit"
+                      disabled={manualPending || !manualInput.trim()}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs h-9 px-4 rounded-xl"
+                    >
+                      입력
+                    </Button>
+                  </form>
 
-                {/* Stop Scan and Release Camera Button */}
-                <Button
-                  onClick={() => setScanState("idle")}
-                  variant="outline"
-                  className="w-full border-[#2C2C2E] bg-transparent text-slate-400 hover:bg-[#2C2C2E] hover:text-white py-5 rounded-2xl text-xs gap-1.5"
-                >
-                  <EyeOff className="h-4 w-4" />
-                  <span>스캔 중지 (대시보드로 복귀)</span>
-                </Button>
+                  {/* Stop Scan and Release Camera Button */}
+                  <Button
+                    onClick={() => setScanState("idle")}
+                    variant="outline"
+                    className="w-full border-[#2C2C2E] bg-[#1E1E1E]/60 text-slate-400 hover:bg-[#2C2C2E] hover:text-white py-2.5 h-9 rounded-xl text-xs gap-1.5"
+                  >
+                    <EyeOff className="h-3.5 w-3.5" />
+                    <span>스캔 중지 (대시보드로 복귀)</span>
+                  </Button>
+                </div>
               </div>
             )}
 
             {/* 3. Success Participation View */}
             {scanState === "success" && scannedStudent && (
-              <Card className="border-[#32D74B] bg-[#1E1E1E] text-white shadow-2xl shadow-emerald-950/20 animate-scale-up py-4">
+              <Card className="border-[#32D74B] bg-[#1E1E1E] text-white shadow-2xl shadow-emerald-950/20 animate-scale-up py-4 max-w-md mx-auto w-full my-auto">
                 <CardContent className="flex flex-col items-center justify-center p-6 space-y-6 text-center">
                   <div className="rounded-full bg-emerald-950/50 p-4 border-4 border-[#32D74B] animate-bounce-slow">
                     <CheckCircle2 className="h-14 w-14 text-[#32D74B]" />
@@ -506,7 +544,7 @@ function KioskContent() {
 
             {/* 4. Error Participation View */}
             {scanState === "error" && (
-              <Card className="border-[#FF453A] bg-[#1E1E1E] text-white shadow-2xl shadow-rose-950/20 animate-shake py-4">
+              <Card className="border-[#FF453A] bg-[#1E1E1E] text-white shadow-2xl shadow-rose-950/20 animate-shake py-4 max-w-md mx-auto w-full my-auto">
                 <CardContent className="flex flex-col items-center justify-center p-6 space-y-6 text-center">
                   <div className="rounded-full bg-rose-950/50 p-4 border-4 border-[#FF453A]">
                     <AlertTriangle className="h-14 w-14 text-[#FF453A]" />

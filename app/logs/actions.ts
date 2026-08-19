@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 export interface LogEntry {
   id: string;
@@ -35,14 +35,20 @@ interface LogRow {
  */
 export async function recordLogAction(eventId: string | null, actionType: string, details: string) {
   try {
-    const supabase = await createClient();
+    const authClient = await createClient();
+    const adminClient = createAdminClient();
 
-    // Get current logged-in user profile id
-    const { data: { user } } = await supabase.auth.getUser();
-    const currentUserId = user ? user.id : null;
+    // Get current logged-in user profile id if available
+    let currentUserId: string | null = null;
+    try {
+      const { data: { user } } = await authClient.auth.getUser();
+      currentUserId = user ? user.id : null;
+    } catch {
+      // unauthenticated
+    }
 
     // Try inserting with operator_id & action_type first
-    const { error: err1 } = await supabase.from("logs").insert({
+    const { error: err1 } = await adminClient.from("logs").insert({
       event_id: eventId,
       operator_id: currentUserId,
       action_type: actionType,
@@ -51,7 +57,7 @@ export async function recordLogAction(eventId: string | null, actionType: string
 
     if (err1) {
       // Fallback insert for user_id & action column names
-      await supabase.from("logs").insert({
+      await adminClient.from("logs").insert({
         event_id: eventId,
         user_id: currentUserId,
         action: actionType,

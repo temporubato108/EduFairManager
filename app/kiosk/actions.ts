@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 interface RecordParticipationResponse {
@@ -45,7 +45,7 @@ export async function recordParticipationAction(
   }
   const [eventId, studentId] = parts;
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // 2. Fetch Booth details and parent Event policies
   const { data: booth, error: boothError } = await supabase

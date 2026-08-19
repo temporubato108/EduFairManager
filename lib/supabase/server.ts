@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -22,6 +23,28 @@ export async function createClient() {
             // This can be ignored if middleware is refreshing sessions.
           }
         },
+      },
+    }
+  );
+}
+
+/**
+ * Service Role / Admin client to securely perform server actions
+ * that bypass RLS (e.g. Kiosk participation recording, system log recording, etc.)
+ */
+export function createAdminClient() {
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    "";
+
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    serviceKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
       },
     }
   );

@@ -13,3 +13,14 @@ alter table public.logs alter column action drop not null;
 
 -- 3. Fix settings table
 alter table public.settings alter column value type text using value::text;
+
+-- 4. Fix RLS policies for Kiosk and public access
+drop policy if exists "Allow authenticated operators to insert participations" on public.participations;
+create policy "Allow insert participations" on public.participations for insert with check (true);
+
+drop policy if exists "Allow public read access to participations" on public.participations;
+create policy "Allow public read access to participations" on public.participations for select using (true);
+
+drop policy if exists "Allow authenticated users to insert logs" on public.logs;
+create policy "Allow insert logs" on public.logs for insert with check (true);
+

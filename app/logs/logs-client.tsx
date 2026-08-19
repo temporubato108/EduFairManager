@@ -207,7 +207,7 @@ export function LogsClientPage({ initialEvents }: LogsClientPageProps) {
             <form onSubmit={handleSearchSubmit} className="grid gap-4 sm:grid-cols-12 items-end">
               {/* Event filter dropdown */}
               <div className="sm:col-span-4 space-y-1">
-                <Label className="text-slate-500 dark:text-[#98989D] text-xs">대상 행사 선택</Label>
+                <Label className="text-slate-500 dark:text-[#98989D] text-xs">행사 선택</Label>
                 <Select value={selectedEventId} onValueChange={(val) => val && setSelectedEventId(val)}>
                   <SelectTrigger className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] text-slate-800 dark:text-white text-xs h-9">
                     <SelectValue placeholder="전체" />

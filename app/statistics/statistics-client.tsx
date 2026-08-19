@@ -222,7 +222,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
         <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
           <div className="p-4 flex flex-col sm:flex-row items-center gap-4">
             <div className="w-full sm:w-64 space-y-1">
-              <Label className="text-slate-500 dark:text-[#98989D] text-xs">대상 행사 선택</Label>
+              <Label className="text-slate-500 dark:text-[#98989D] text-xs">행사 선택</Label>
               <Select value={selectedEventId} onValueChange={(val) => val && handleEventChange(val)}>
                 <SelectTrigger className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] text-slate-800 dark:text-white">
                   <SelectValue placeholder="행사를 선택하세요" />

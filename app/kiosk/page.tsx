@@ -52,7 +52,7 @@ function KioskContent() {
   const [participantCount, setParticipantCount] = useState(0);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [scannedStudent, setScannedStudent] = useState<{ name: string; number: string } | null>(null);
-  const [countdown, setCountdown] = useState(3);
+  const [countdown, setCountdown] = useState(1);
   
   // Manual Input State
   const [manualInput, setManualInput] = useState("");
@@ -174,7 +174,7 @@ function KioskContent() {
       setScanState("error");
     } finally {
       setLoading(false);
-      setCountdown(3);
+      setCountdown(1);
     }
   }, [boothId, playSuccessSound, playErrorSound]);
 
@@ -233,7 +233,7 @@ function KioskContent() {
     };
   }, [booth, scanState, handleProcessScan]);
 
-  // Countdown timer for 3-seconds auto-return
+  // Countdown timer for 1-second auto-return
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
@@ -245,7 +245,7 @@ function KioskContent() {
             setScanState("scanning");
             setResultMessage(null);
             setScannedStudent(null);
-            return 3;
+            return 1;
           }
           return prev - 1;
         });
@@ -534,7 +534,7 @@ function KioskContent() {
                     <div className="w-full h-1.5 bg-[#121212] rounded-full overflow-hidden">
                       <div
                         className="h-full bg-[#32D74B] rounded-full transition-all duration-1000 ease-linear"
-                        style={{ width: `${(countdown / 3) * 100}%` }}
+                        style={{ width: `${(countdown / 1) * 100}%` }}
                       ></div>
                     </div>
                   </div>
@@ -568,7 +568,7 @@ function KioskContent() {
                     <div className="w-full h-1.5 bg-[#121212] rounded-full overflow-hidden">
                       <div
                         className="h-full bg-[#FF453A] rounded-full transition-all duration-1000 ease-linear"
-                        style={{ width: `${(countdown / 3) * 100}%` }}
+                        style={{ width: `${(countdown / 1) * 100}%` }}
                       ></div>
                     </div>
                   </div>

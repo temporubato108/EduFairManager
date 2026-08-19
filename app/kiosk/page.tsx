@@ -48,16 +48,24 @@ function KioskContent() {
   const [muted, setMuted] = useState(false);
 
   // Kiosk scanner and dashboard states
-  const [scanState, setScanState] = useState<"idle" | "scanning" | "success" | "error">("idle");
+  const [scanState, setScanState] = useState<"idle" | "scanning">("idle");
   const [participantCount, setParticipantCount] = useState(0);
-  const [resultMessage, setResultMessage] = useState<string | null>(null);
-  const [scannedStudent, setScannedStudent] = useState<{ name: string; number: string } | null>(null);
   
+  // Realtime overlay feedback state
+  const [overlayResult, setOverlayResult] = useState<{
+    type: "success" | "error";
+    title?: string;
+    name?: string;
+    number?: string;
+    message: string;
+  } | null>(null);
+
   // Manual Input State
   const [manualInput, setManualInput] = useState("");
   const [manualPending, setManualPending] = useState(false);
 
-  // Throttle refs
+  // Throttle & processing lock refs
+  const isProcessingRef = useRef<boolean>(false);
   const lastScannedQrRef = useRef<string>("");
   const lastScannedTimeRef = useRef<number>(0);
 
@@ -70,7 +78,7 @@ function KioskContent() {
         .then((res) => {
           if (res.error) {
             setError(res.error);
-            setScanState("error");
+            setScanState("idle");
           } else if (res.data) {
             setBooth(res.data);
             setParticipantCount(res.data.participant_count);
@@ -79,7 +87,7 @@ function KioskContent() {
         })
         .catch(() => {
           setError("부스 정보를 불러오는 중 오류가 발생했습니다.");
-          setScanState("error");
+          setScanState("idle");
         })
         .finally(() => {
           setLoading(false);
@@ -142,41 +150,58 @@ function KioskContent() {
     }
   }, [muted]);
 
-  // Process QR scanner text
+  // Process QR scanner text (Non-blocking seamless overlay flow)
   const handleProcessScan = useCallback(async (qrText: string) => {
-    if (!boothId) return;
-
-    setScanState("idle"); // Temporarily hold scan loop
-    setLoading(true);
+    if (!boothId || isProcessingRef.current) return;
+    isProcessingRef.current = true;
 
     try {
       const res = await recordParticipationAction(boothId, qrText);
 
       if (res.error) {
         playErrorSound();
-        setResultMessage(res.error);
-        setScanState("error");
+        setOverlayResult({
+          type: "error",
+          title: "등록 오류 및 차단",
+          message: res.error,
+        });
+
+        setTimeout(() => {
+          setOverlayResult(null);
+          isProcessingRef.current = false;
+        }, 1500);
       } else if (res.success) {
         playSuccessSound();
         setParticipantCount((prev) => prev + 1); // Locally increment count immediately
-        setResultMessage("행사 참여 등록 완료!");
-        setScannedStudent({
+        setOverlayResult({
+          type: "success",
           name: res.studentName || "학생",
-          number: res.studentNumber || "미지정 학번",
+          number: res.studentNumber || "",
+          message: "행사 참여 등록 완료!",
         });
-        setScanState("success");
+
+        setTimeout(() => {
+          setOverlayResult(null);
+          isProcessingRef.current = false;
+        }, 1000);
       }
     } catch (err) {
       console.error("Scan processing error:", err);
       playErrorSound();
-      setResultMessage("참여 처리 중 알 수 없는 시스템 오류가 발생했습니다.");
-      setScanState("error");
-    } finally {
-      setLoading(false);
+      setOverlayResult({
+        type: "error",
+        title: "시스템 오류",
+        message: "참여 처리 중 알 수 없는 시스템 오류가 발생했습니다.",
+      });
+
+      setTimeout(() => {
+        setOverlayResult(null);
+        isProcessingRef.current = false;
+      }, 1500);
     }
   }, [boothId, playSuccessSound, playErrorSound]);
 
-  // QR Scanning Scanner Event Hook
+  // QR Scanning Scanner Event Hook (Runs once per scanning session, stays alive)
   useEffect(() => {
     let html5Qrcode: Html5Qrcode | null = null;
     
@@ -188,20 +213,22 @@ function KioskContent() {
           await html5Qrcode.start(
             { facingMode: "environment" },
             {
-              fps: 10,
+              fps: 15,
               qrbox: (width, height) => {
-                const size = Math.min(width, height) * 0.7;
+                const size = Math.min(width, height) * 0.75;
                 return { width: size, height: size };
               },
             },
             (decodedText) => {
+              // If already processing a scan, ignore new frames
+              if (isProcessingRef.current) return;
+
               // Same-QR 2-second rate limit
               const now = Date.now();
               if (
                 decodedText === lastScannedQrRef.current &&
                 now - lastScannedTimeRef.current < 2000
               ) {
-                console.log("Same QR scan ignored within 2 seconds");
                 return;
               }
 
@@ -230,24 +257,6 @@ function KioskContent() {
       }
     };
   }, [booth, scanState, handleProcessScan]);
-
-  // Countdown timer for 1-second auto-return
-  useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
-
-    if (scanState === "success" || scanState === "error") {
-      timer = setTimeout(() => {
-        // Automatically return to scanning mode (continuous scanning)
-        setScanState("scanning");
-        setResultMessage(null);
-        setScannedStudent(null);
-      }, 1000);
-    }
-
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [scanState]);
 
   // Manual fallback submission
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -323,6 +332,18 @@ function KioskContent() {
         }
         .animate-shrink-1s {
           animation: countdownShrink 1000ms linear forwards !important;
+          will-change: width;
+        }
+        @keyframes countdownShrink15s {
+          0% {
+            width: 100%;
+          }
+          100% {
+            width: 0%;
+          }
+        }
+        .animate-shrink-15s {
+          animation: countdownShrink15s 1500ms linear forwards !important;
           will-change: width;
         }
       `}</style>
@@ -463,19 +484,80 @@ function KioskContent() {
                 <div className="relative flex-1 w-full rounded-2xl sm:rounded-3xl overflow-hidden border-2 sm:border-4 border-indigo-500/60 bg-black shadow-2xl flex items-center justify-center min-h-[50vh]">
                   <div id="kiosk-reader" className="w-full h-full object-cover"></div>
                   
-                  {/* Neon HUD overlay elements */}
-                  <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-6 sm:p-8">
-                    <div className="flex justify-between">
-                      <div className="w-8 h-8 border-t-4 border-l-4 border-indigo-400 rounded-tl-lg"></div>
-                      <div className="w-8 h-8 border-t-4 border-r-4 border-indigo-400 rounded-tr-lg"></div>
+                  {/* Neon HUD overlay elements (only active when not displaying result modal) */}
+                  {!overlayResult && (
+                    <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-6 sm:p-8 z-10">
+                      <div className="flex justify-between">
+                        <div className="w-8 h-8 border-t-4 border-l-4 border-indigo-400 rounded-tl-lg"></div>
+                        <div className="w-8 h-8 border-t-4 border-r-4 border-indigo-400 rounded-tr-lg"></div>
+                      </div>
+                      {/* Scanner scanning bar indicator */}
+                      <div className="w-full h-0.5 bg-indigo-400 opacity-60 shadow-[0_0_12px_#818cf8] animate-scan-line"></div>
+                      <div className="flex justify-between">
+                        <div className="w-8 h-8 border-b-4 border-l-4 border-indigo-400 rounded-bl-lg"></div>
+                        <div className="w-8 h-8 border-b-4 border-r-4 border-indigo-400 rounded-br-lg"></div>
+                      </div>
                     </div>
-                    {/* Scanner scanning bar indicator */}
-                    <div className="w-full h-0.5 bg-indigo-400 opacity-60 shadow-[0_0_12px_#818cf8] animate-scan-line"></div>
-                    <div className="flex justify-between">
-                      <div className="w-8 h-8 border-b-4 border-l-4 border-indigo-400 rounded-bl-lg"></div>
-                      <div className="w-8 h-8 border-b-4 border-r-4 border-indigo-400 rounded-br-lg"></div>
+                  )}
+
+                  {/* Overlay Feedback Modal (Floating directly over active camera) */}
+                  {overlayResult && (
+                    <div className="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-scale-up">
+                      {overlayResult.type === "success" ? (
+                        <div className="w-full max-w-xs sm:max-w-sm rounded-2xl border-2 border-[#32D74B] bg-[#1E1E1E]/95 backdrop-blur-md p-5 text-center space-y-3 shadow-2xl shadow-emerald-950/50">
+                          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-950/80 border-2 border-[#32D74B] animate-bounce-slow">
+                            <CheckCircle2 className="h-7 w-7 text-[#32D74B]" />
+                          </div>
+
+                          <div className="space-y-0.5">
+                            {overlayResult.number && (
+                              <p className="text-xs font-mono font-medium text-slate-400">{overlayResult.number}</p>
+                            )}
+                            <h2 className="text-2xl font-black tracking-tight text-white">{overlayResult.name}</h2>
+                          </div>
+
+                          <div className="py-1.5 px-3 bg-[#121212] border border-[#2C2C2E] rounded-xl text-xs font-bold text-[#32D74B] font-mono">
+                            {overlayResult.message}
+                          </div>
+
+                          {/* 1s Progress shrink bar */}
+                          <div className="w-full space-y-1.5 pt-1">
+                            <div className="flex justify-between items-center text-[10px] text-slate-400">
+                              <span>다음 학생 스캔 준비</span>
+                              <span className="font-mono font-bold text-white">1초</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-[#121212] rounded-full overflow-hidden">
+                              <div className="h-full bg-[#32D74B] rounded-full animate-shrink-1s"></div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full max-w-xs sm:max-w-sm rounded-2xl border-2 border-[#FF453A] bg-[#1E1E1E]/95 backdrop-blur-md p-5 text-center space-y-3 shadow-2xl shadow-rose-950/50 animate-shake">
+                          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-950/80 border-2 border-[#FF453A]">
+                            <AlertTriangle className="h-7 w-7 text-[#FF453A]" />
+                          </div>
+
+                          <div className="space-y-1">
+                            <h2 className="text-lg font-bold text-white tracking-tight">{overlayResult.title || "등록 오류"}</h2>
+                            <p className="text-xs text-[#FF453A] bg-[#121212] p-2.5 rounded-xl border border-rose-900/40 leading-relaxed font-medium">
+                              {overlayResult.message}
+                            </p>
+                          </div>
+
+                          {/* 1.5s Progress shrink bar */}
+                          <div className="w-full space-y-1.5 pt-1">
+                            <div className="flex justify-between items-center text-[10px] text-slate-400">
+                              <span>스캐너 자동 복귀</span>
+                              <span className="font-mono font-bold text-white">1.5초</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-[#121212] rounded-full overflow-hidden">
+                              <div className="h-full bg-[#FF453A] rounded-full animate-shrink-15s"></div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Bottom Controls Area */}
@@ -510,68 +592,6 @@ function KioskContent() {
                   </Button>
                 </div>
               </div>
-            )}
-
-            {/* 3. Success Participation View */}
-            {scanState === "success" && scannedStudent && (
-              <Card className="border-[#32D74B] bg-[#1E1E1E] text-white shadow-2xl shadow-emerald-950/20 animate-scale-up py-4 max-w-md mx-auto w-full my-auto">
-                <CardContent className="flex flex-col items-center justify-center p-6 space-y-6 text-center">
-                  <div className="rounded-full bg-emerald-950/50 p-4 border-4 border-[#32D74B] animate-bounce-slow">
-                    <CheckCircle2 className="h-14 w-14 text-[#32D74B]" />
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <h3 className="text-sm font-semibold text-[#98989D]">{scannedStudent.number}</h3>
-                    <h2 className="text-3xl font-extrabold text-white tracking-wide">{scannedStudent.name}</h2>
-                  </div>
-
-                  <div className="w-full py-2 bg-[#121212] border border-[#2C2C2E] rounded-xl text-xs font-semibold text-[#32D74B] font-mono tracking-wider">
-                    {resultMessage}
-                  </div>
-
-                  {/* Countdown progress indicator bar */}
-                  <div className="w-full space-y-2">
-                    <div className="flex justify-between items-center text-[10px] text-[#98989D]">
-                      <span>카메라 자동 복귀</span>
-                      <span className="font-mono font-bold text-white">1초</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-[#121212] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#32D74B] rounded-full animate-shrink-1s"></div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* 4. Error Participation View */}
-            {scanState === "error" && (
-              <Card className="border-[#FF453A] bg-[#1E1E1E] text-white shadow-2xl shadow-rose-950/20 animate-shake py-4 max-w-md mx-auto w-full my-auto">
-                <CardContent className="flex flex-col items-center justify-center p-6 space-y-6 text-center">
-                  <div className="rounded-full bg-rose-950/50 p-4 border-4 border-[#FF453A]">
-                    <AlertTriangle className="h-14 w-14 text-[#FF453A]" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <h2 className="text-xl font-bold text-white tracking-tight">등록 오류 및 차단</h2>
-                    <p className="text-xs text-[#98989D]">이유 및 진단 피드백</p>
-                  </div>
-
-                  <div className="w-full p-4 bg-[#121212] border border-rose-900/40 rounded-xl text-xs text-[#FF453A] font-medium leading-relaxed">
-                    {resultMessage}
-                  </div>
-
-                  {/* Countdown progress indicator bar */}
-                  <div className="w-full space-y-2">
-                    <div className="flex justify-between items-center text-[10px] text-[#98989D]">
-                      <span>카메라 자동 복귀</span>
-                      <span className="font-mono font-bold text-white">1초</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-[#121212] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#FF453A] rounded-full animate-shrink-1s"></div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             )}
 
           </div>

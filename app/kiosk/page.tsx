@@ -392,7 +392,7 @@ function KioskContent() {
       </header>
 
       {/* Main Kiosk Area */}
-      <main className="flex flex-1 flex-col items-center justify-center p-2 sm:p-4 relative overflow-hidden h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-4rem)] max-h-[calc(100dvh-3.5rem)] sm:max-h-[calc(100dvh-4rem)]">
+      <main className="flex flex-1 flex-col items-center justify-center p-2 sm:p-6 relative overflow-hidden h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-4rem)] max-h-[calc(100dvh-3.5rem)] sm:max-h-[calc(100dvh-4rem)]">
         {error ? (
           <Card className="w-full max-w-md border-rose-950 bg-[#1E1E1E] text-white shadow-xl">
             <CardHeader className="text-center">
@@ -411,9 +411,9 @@ function KioskContent() {
             </CardContent>
           </Card>
         ) : booth ? (
-          <div className="w-full max-w-md sm:max-w-lg flex flex-col items-center justify-center mx-auto my-auto overflow-hidden px-1">
+          <div className="w-full max-w-none sm:max-w-md md:max-w-lg flex flex-col items-center justify-center mx-auto my-auto overflow-hidden px-1 sm:px-0">
             
-            {/* 1. Kiosk Dashboard Mode (Idle State) - Full-width Center Card */}
+            {/* 1. Kiosk Dashboard Mode (Idle State) - Full-width on Mobile, Clean Center on Desktop */}
             {scanState === "idle" && (
               <Card className="border-2 border-[#2C2C2E] bg-[#1E1E1E] text-white shadow-2xl w-full my-auto rounded-[2rem] overflow-hidden p-5 sm:p-7 flex flex-col justify-center space-y-5 animate-scale-up">
                 <CardHeader className="text-center pb-1 space-y-2 p-0">
@@ -471,7 +471,7 @@ function KioskContent() {
               </Card>
             )}
 
-            {/* 2. Camera Scanning View - Full-width Centered Square (Matches media_1787161263964.jpg) */}
+            {/* 2. Camera Scanning View - Full Mobile Width Match (Matches 2nd Reference Image) */}
             {scanState === "scanning" && (
               <div className="flex flex-col w-full items-center justify-center space-y-3 sm:space-y-4 my-auto animate-fade-in">
                 {/* Header Info Card */}
@@ -487,7 +487,7 @@ function KioskContent() {
                   </div>
                 </div>
 
-                {/* Viewport Frame - True Square Viewfinder filling full width */}
+                {/* Viewport Frame - Full-width square viewfinder */}
                 <div className="relative w-full aspect-square rounded-3xl overflow-hidden border-4 border-indigo-500 bg-black shadow-2xl flex items-center justify-center shrink-0">
                   <div id="kiosk-reader" className="w-full h-full aspect-square object-cover"></div>
                   

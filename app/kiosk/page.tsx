@@ -258,9 +258,9 @@ function KioskContent() {
           });
 
           const scanConfig = {
-            fps: 25,
+            fps: 30, // 30 FPS for buttery smooth motion and instant decoding
             qrbox: (width: number, height: number) => {
-              const size = Math.floor(Math.min(width, height) * 0.85);
+              const size = Math.floor(Math.min(width, height) * 0.9);
               return { width: size, height: size };
             },
             aspectRatio: 1.0,
@@ -286,27 +286,43 @@ function KioskContent() {
 
           if (!isMounted) return;
 
-          // 3. Multi-tier camera startup: Try environment (rear) camera first, fallback to any available camera
+          // 3. Multi-tier camera startup: Request FHD (1080p) rear camera with fallback
+          const highDefConstraints: MediaTrackConstraints = {
+            facingMode: "environment",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          };
+
           try {
             await html5Qrcode.start(
-              { facingMode: "environment" },
+              highDefConstraints,
               scanConfig,
               onScanSuccess,
               () => {}
             );
           } catch (firstErr) {
-            console.warn("First camera attempt failed, trying fallback:", firstErr);
+            console.warn("High-def rear camera attempt failed, trying standard fallback:", firstErr);
             if (!isMounted) return;
-            // Fallback attempt with default/user facing mode
-            await html5Qrcode.start(
-              { facingMode: "user" },
-              scanConfig,
-              onScanSuccess,
-              () => {}
-            );
+            try {
+              await html5Qrcode.start(
+                { facingMode: "environment" },
+                scanConfig,
+                onScanSuccess,
+                () => {}
+              );
+            } catch (fallbackErr) {
+              console.warn("Rear camera failed, trying user camera fallback:", fallbackErr);
+              if (!isMounted) return;
+              await html5Qrcode.start(
+                { facingMode: "user" },
+                scanConfig,
+                onScanSuccess,
+                () => {}
+              );
+            }
           }
 
-          // 4. Safely attempt continuous autofocus on the active track if supported
+          // 4. Safely apply Hardware Zoom (1.8x), Continuous Auto-Focus & Auto-Exposure
           try {
             const videoElem = document.querySelector("#kiosk-reader video") as HTMLVideoElement | null;
             if (videoElem && videoElem.srcObject instanceof MediaStream) {
@@ -316,11 +332,22 @@ function KioskContent() {
                 const capabilities = track.getCapabilities() as any;
                 const advancedConstraints: Record<string, unknown>[] = [];
 
+                // Continuous Auto Focus
                 if (capabilities.focusMode && Array.isArray(capabilities.focusMode) && capabilities.focusMode.includes("continuous")) {
                   advancedConstraints.push({ focusMode: "continuous" });
                 }
+                // Continuous Auto Exposure
                 if (capabilities.exposureMode && Array.isArray(capabilities.exposureMode) && capabilities.exposureMode.includes("continuous")) {
                   advancedConstraints.push({ exposureMode: "continuous" });
+                }
+                // Smart Hardware Zoom (1.8x for optimal 20-30cm focal distance)
+                if (capabilities.zoom && typeof capabilities.zoom === "object") {
+                  const minZ = capabilities.zoom.min || 1;
+                  const maxZ = capabilities.zoom.max || 1;
+                  if (maxZ > 1.2) {
+                    const targetZoom = Math.min(Math.max(1.8, minZ), maxZ);
+                    advancedConstraints.push({ zoom: targetZoom });
+                  }
                 }
 
                 if (advancedConstraints.length > 0) {
@@ -331,8 +358,8 @@ function KioskContent() {
                 }
               }
             }
-          } catch {
-            // Non-critical: Ignore if browser does not support track focus constraints
+          } catch (e) {
+            console.warn("Could not apply hardware zoom/focus constraints", e);
           }
 
           if (isMounted) {
@@ -712,7 +739,11 @@ function KioskContent() {
                 </div>
 
                 {/* Bottom Controls Area - Large full-width touch targets */}
-                <div className="w-full space-y-2.5 shrink-0">
+                <div className="w-full space-y-2 shrink-0">
+                  <p className="text-center text-xs font-bold text-indigo-300/90 py-0.5">
+                    💡 20~30cm 거리에서 비추면 가장 선명하고 빠르게 인식됩니다.
+                  </p>
+
                   {/* Manual input row */}
                   <form onSubmit={handleManualSubmit} className="flex gap-2.5 items-center bg-[#1E1E1E] p-2.5 rounded-2xl border-2 border-[#2C2C2E] shadow-xl">
                     <Input

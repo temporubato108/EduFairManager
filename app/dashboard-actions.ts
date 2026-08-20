@@ -71,7 +71,7 @@ export async function getAdminDashboardDataAction(eventId: string) {
     // 2. Fetch all participations with created_at to aggregate statistics
     const { data: participations, error: pError } = await supabase
       .from("participations")
-      .select("id, created_at, booth_id, student_id, booth:booths(name, operator_name, description, operator:teachers(name)), student:students(name, student_number)")
+      .select("id, created_at, booth_id, student_id, booth:booths(name, description, operator:teachers(name)), student:students(name, student_number)")
       .eq("event_id", eventId);
 
     if (pError) throw new Error(pError.message);

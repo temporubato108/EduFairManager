@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState } from "react";
 import { loginAction } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,30 +12,6 @@ import Link from "next/link";
 
 export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(loginAction, null);
-
-  // Automatically sweep and purge any old fragmented cookie chunks from previous sessions
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cookieList = document.cookie.split(";");
-        for (const cookieItem of cookieList) {
-          const eqIndex = cookieItem.indexOf("=");
-          const cookieName = eqIndex > -1 ? cookieItem.substring(0, eqIndex).trim() : cookieItem.trim();
-          if (
-            cookieName.startsWith("sb-") ||
-            cookieName.includes("auth-token")
-          ) {
-            document.cookie = `${cookieName}=; Max-Age=0; path=/;`;
-            document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
-            document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname};`;
-            document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.${window.location.hostname};`;
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }, []);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 py-12 text-slate-800 dark:text-white relative select-none">

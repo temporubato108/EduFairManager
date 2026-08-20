@@ -43,23 +43,8 @@ export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
-  const [schoolName, setSchoolName] = useState(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("edufair_school_name");
-      if (stored) return cleanSchoolName(stored);
-    }
-    return "EduFair Admin";
-  });
-
-  const [schoolLogo, setSchoolLogo] = useState(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("edufair_school_logo");
-      if (stored && isValidSchoolLogo(stored)) return stored;
-    }
-    return "";
-  });
-
+  const [schoolName, setSchoolName] = useState("EduFair Admin");
+  const [schoolLogo, setSchoolLogo] = useState("");
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
@@ -67,8 +52,6 @@ export function Sidebar({ onClose }: SidebarProps) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         let name = "";
-        let validLogo = "";
-
         if (user?.user_metadata?.school_name) {
           name = cleanSchoolName(user.user_metadata.school_name);
         }
@@ -77,25 +60,25 @@ export function Sidebar({ onClose }: SidebarProps) {
           .from("settings")
           .select("key, value");
 
+        let validLogo = "";
         if (data) {
-          if (user) {
-            const userLogoRow = data.find((r) => r.key === `school_logo_${user.id}`);
-            if (userLogoRow?.value && isValidSchoolLogo(userLogoRow.value)) {
-              validLogo = String(userLogoRow.value).trim();
-            }
-          }
-
-          if (!validLogo) {
-            const logoRow = data.find((r) => r.key === "school_logo");
-            if (logoRow?.value && isValidSchoolLogo(logoRow.value)) {
-              validLogo = String(logoRow.value).trim();
-            }
-          }
-
+          const nameRow = data.find((r) => r.key === "school_name");
+          const logoRow = data.find((r) => r.key === "school_logo");
           if (!name) {
-            const nameRow = data.find((r) => r.key === "school_name");
             name = cleanSchoolName(nameRow?.value || "EduFair Admin");
           }
+          
+          let rawLogo = logoRow?.value;
+          if (typeof rawLogo === "string") {
+            try {
+              if ((rawLogo.startsWith('"') && rawLogo.endsWith('"')) || rawLogo.startsWith('{') || rawLogo.startsWith('[')) {
+                rawLogo = JSON.parse(rawLogo);
+              }
+            } catch {
+              // raw
+            }
+          }
+          validLogo = isValidSchoolLogo(rawLogo) ? String(rawLogo).trim() : "";
         }
 
         if (!name) name = "EduFair Admin";
@@ -103,11 +86,6 @@ export function Sidebar({ onClose }: SidebarProps) {
         setSchoolName(name);
         setSchoolLogo(validLogo);
         setCachedSettings({ schoolName: name, schoolLogo: validLogo });
-
-        if (typeof window !== "undefined") {
-          localStorage.setItem("edufair_school_name", name);
-          localStorage.setItem("edufair_school_logo", validLogo);
-        }
       } catch (err) {
         console.error(err);
       }
@@ -116,12 +94,6 @@ export function Sidebar({ onClose }: SidebarProps) {
   }, []);
 
   const handleLogout = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("edufair_school_name");
-      localStorage.removeItem("edufair_school_logo");
-      localStorage.removeItem("edufair_user_name");
-      localStorage.removeItem("edufair_user_role");
-    }
     clearClientCache();
     startTransition(async () => {
       await logoutAction();

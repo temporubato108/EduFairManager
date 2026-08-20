@@ -17,22 +17,8 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const [isPending, startTransition] = useTransition();
-
-  const [userName, setUserName] = useState(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("edufair_user_name");
-      if (stored) return stored;
-    }
-    return "관리자";
-  });
-
-  const [role, setRole] = useState(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("edufair_user_role");
-      if (stored) return stored;
-    }
-    return "학교 관리자";
-  });
+  const [userName, setUserName] = useState("관리자");
+  const [role, setRole] = useState("학교 관리자");
 
   useEffect(() => {
     async function loadUser() {
@@ -51,16 +37,9 @@ export function Header({ onMenuClick }: HeaderProps) {
             ? "관리자"
             : "부스 운영교사";
 
-          const roleDisplay = schoolName ? `${schoolName} (${resolvedRole})` : resolvedRole;
-
           setUserName(username);
-          setRole(roleDisplay);
-          setCachedUser({ userName: username, role: roleDisplay });
-
-          if (typeof window !== "undefined") {
-            localStorage.setItem("edufair_user_name", username);
-            localStorage.setItem("edufair_user_role", roleDisplay);
-          }
+          setRole(schoolName ? `${schoolName} (${resolvedRole})` : resolvedRole);
+          setCachedUser({ userName: username, role: schoolName ? `${schoolName} (${resolvedRole})` : resolvedRole });
         }
       } catch (err) {
         console.error(err);
@@ -70,12 +49,6 @@ export function Header({ onMenuClick }: HeaderProps) {
   }, []);
 
   const handleLogout = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("edufair_school_name");
-      localStorage.removeItem("edufair_school_logo");
-      localStorage.removeItem("edufair_user_name");
-      localStorage.removeItem("edufair_user_role");
-    }
     clearClientCache();
     startTransition(async () => {
       await logoutAction();

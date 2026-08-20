@@ -59,6 +59,13 @@ export async function signupAction(
       return { error: `이미 사용 중인 아이디입니다: '${username}'. 다른 아이디를 입력해주세요.` };
     }
 
+    // Clear any previous stale session cookies first
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // ignore
+    }
+
     // 2. Create User via Admin API (Pre-confirmed, zero email rate limit)
     const { data: createdUserData, error: createError } = await adminSupabase.auth.admin.createUser({
       email,

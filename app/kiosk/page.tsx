@@ -485,9 +485,9 @@ function KioskContent() {
       </header>
 
       {/* Main Kiosk Area */}
-      <main className="flex flex-1 flex-col items-center justify-center p-2 sm:p-6 relative overflow-hidden h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-4rem)] max-h-[calc(100dvh-3.5rem)] sm:max-h-[calc(100dvh-4rem)]">
+      <main className="flex flex-1 flex-col items-center justify-center p-3 sm:p-6 relative overflow-y-auto min-h-0 w-full">
         {error ? (
-          <Card className="w-full max-w-md border-rose-950 bg-[#1E1E1E] text-white shadow-xl">
+          <Card className="w-full max-w-lg border-rose-950 bg-[#1E1E1E] text-white shadow-xl">
             <CardHeader className="text-center">
               <CardTitle className="text-xl font-bold tracking-tight text-[#FF453A]">부스 연결 끊김</CardTitle>
               <CardDescription className="text-[#98989D]">
@@ -504,35 +504,35 @@ function KioskContent() {
             </CardContent>
           </Card>
         ) : booth ? (
-          <div className="w-full max-w-none sm:max-w-md md:max-w-lg flex flex-col items-center justify-center mx-auto my-auto overflow-hidden px-1 sm:px-0">
+          <div className="w-full max-w-lg sm:max-w-xl md:max-w-2xl flex flex-col items-center justify-center mx-auto my-auto">
             
             {/* 1. Kiosk Dashboard Mode (Idle State) - Full-width on Mobile, Clean Center on Desktop */}
             {scanState === "idle" && (
-              <Card className="border-2 border-[#2C2C2E] bg-[#1E1E1E] text-white shadow-2xl w-full my-auto rounded-[2rem] overflow-hidden p-5 sm:p-7 flex flex-col justify-center space-y-5 animate-scale-up">
+              <Card className="border-2 border-[#2C2C2E] bg-[#1E1E1E] text-white shadow-2xl w-full my-auto rounded-3xl sm:rounded-[2.5rem] overflow-hidden p-5 sm:p-8 flex flex-col justify-center space-y-5 sm:space-y-6 animate-scale-up">
                 <CardHeader className="text-center pb-1 space-y-2 p-0">
-                  <div className="mx-auto flex h-18 w-18 sm:h-20 sm:w-20 items-center justify-center rounded-3xl bg-indigo-950/90 text-indigo-400 border-2 border-indigo-700/50 shadow-xl shadow-indigo-950/40 p-4">
-                    <Store className="h-10 w-10 sm:h-11 sm:w-11" />
+                  <div className="mx-auto flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl sm:rounded-3xl bg-indigo-950/90 text-indigo-400 border-2 border-indigo-700/50 shadow-xl shadow-indigo-950/40 p-3.5 sm:p-4">
+                    <Store className="h-9 w-9 sm:h-11 sm:w-11" />
                   </div>
                   <CardTitle className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
                     {booth.name}
                   </CardTitle>
                   <div className="flex justify-center pt-0.5">
-                    <span className="text-sm sm:text-base text-indigo-300 font-bold px-4 py-1.5 rounded-full bg-indigo-950/90 border border-indigo-700/60 inline-flex items-center gap-2 font-mono shadow-md">
+                    <span className="text-xs sm:text-sm md:text-base text-indigo-300 font-bold px-4 py-1.5 rounded-full bg-indigo-950/90 border border-indigo-700/60 inline-flex items-center gap-2 font-mono shadow-md">
                       <Calendar className="h-4 w-4 text-indigo-400" />
                       {booth.event_name}
                     </span>
                   </div>
                 </CardHeader>
 
-                <CardContent className="space-y-4 sm:space-y-5 p-0">
+                <CardContent className="space-y-4 sm:space-y-6 p-0">
                   {booth.description && (
-                    <p className="text-sm sm:text-base text-center text-slate-200 px-4 py-3 bg-[#121212] rounded-2xl border-2 border-[#2C2C2E] leading-relaxed font-medium">
+                    <p className="text-xs sm:text-sm md:text-base text-center text-slate-200 px-4 py-3 bg-[#121212] rounded-2xl border border-[#2C2C2E] leading-relaxed font-medium">
                       {booth.description}
                     </p>
                   )}
 
                   {/* Main Metric: Today's Participant Count */}
-                  <div className="rounded-3xl bg-[#121212] border-2 border-[#2C2C2E] p-6 sm:p-7 text-center space-y-2 relative overflow-hidden shadow-inner">
+                  <div className="rounded-2xl sm:rounded-3xl bg-[#121212] border-2 border-[#2C2C2E] p-5 sm:p-8 text-center space-y-2 relative overflow-hidden shadow-inner">
                     <div className="absolute top-3.5 left-4 flex items-center gap-1.5 text-xs sm:text-sm text-slate-400 font-bold">
                       <UserCheck className="h-4 w-4 text-[#32D74B]" />
                       <span>운영 현황</span>
@@ -546,7 +546,7 @@ function KioskContent() {
                       <span className="text-2xl sm:text-3xl font-bold text-slate-300">명</span>
                     </div>
                     
-                    <div className="pt-3.5 flex justify-between items-center text-sm sm:text-base text-slate-300 border-t border-[#2C2C2E] font-mono mt-3">
+                    <div className="pt-3.5 flex justify-between items-center text-xs sm:text-sm md:text-base text-slate-300 border-t border-[#2C2C2E] font-mono mt-3">
                       <span>담당: <strong className="text-white font-bold">{booth.operator_name}</strong></span>
                       <span>중복: <strong className={booth.allow_double_participation ? "text-[#32D74B] font-bold" : "text-amber-400 font-bold"}>{booth.allow_double_participation ? "허용" : "금지"}</strong></span>
                     </div>
@@ -555,33 +555,33 @@ function KioskContent() {
                   {/* Big Scan Activation Button */}
                   <Button
                     onClick={() => setScanState("scanning")}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 active:scale-[0.97] text-white font-black text-2xl sm:text-3xl py-6 sm:py-7 rounded-2xl sm:rounded-3xl gap-3 shadow-2xl shadow-indigo-950/70 transition-all flex items-center justify-center"
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 active:scale-[0.97] text-white font-black text-xl sm:text-2xl md:text-3xl h-14 sm:h-18 rounded-2xl sm:rounded-3xl gap-3 shadow-2xl shadow-indigo-950/70 transition-all flex items-center justify-center"
                   >
-                    <Camera className="h-8 w-8" />
+                    <Camera className="h-6 w-6 sm:h-8 sm:w-8" />
                     <span>QR 스캔 시작</span>
                   </Button>
                 </CardContent>
               </Card>
             )}
 
-            {/* 2. Camera Scanning View - Full Mobile Width Match (Matches 2nd Reference Image) */}
+            {/* 2. Camera Scanning View - Full Mobile Width Match */}
             {scanState === "scanning" && (
               <div className="flex flex-col w-full items-center justify-center space-y-3 sm:space-y-4 my-auto animate-fade-in">
                 {/* Header Info Card */}
-                <div className="w-full bg-[#1E1E1E] border-2 border-[#2C2C2E] rounded-3xl p-4 sm:p-5 flex items-center justify-between shadow-2xl shrink-0">
+                <div className="w-full bg-[#1E1E1E] border-2 border-[#2C2C2E] rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 flex items-center justify-between shadow-2xl shrink-0">
                   <div className="min-w-0 pr-3">
-                    <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight truncate leading-tight">{booth.name}</h2>
-                    <p className="text-sm font-bold text-indigo-400 font-mono truncate mt-0.5">{booth.event_name}</p>
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight truncate leading-tight">{booth.name}</h2>
+                    <p className="text-xs sm:text-sm font-bold text-indigo-400 font-mono truncate mt-0.5">{booth.event_name}</p>
                   </div>
-                  <div className="flex items-baseline gap-1.5 bg-[#121212] px-4 py-2 rounded-2xl border-2 border-[#2C2C2E] font-mono shrink-0 shadow-inner">
-                    <span className="text-sm font-bold text-slate-400">스캔</span>
-                    <span className="text-2xl sm:text-3xl font-black text-indigo-400">{participantCount}</span>
-                    <span className="text-sm font-bold text-slate-400">명</span>
+                  <div className="flex items-baseline gap-1.5 bg-[#121212] px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border-2 border-[#2C2C2E] font-mono shrink-0 shadow-inner">
+                    <span className="text-xs sm:text-sm font-bold text-slate-400">스캔</span>
+                    <span className="text-xl sm:text-2xl md:text-3xl font-black text-indigo-400">{participantCount}</span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-400">명</span>
                   </div>
                 </div>
 
                 {/* Viewport Frame - Full-width square viewfinder */}
-                <div className="relative w-full aspect-square rounded-3xl overflow-hidden border-4 border-indigo-500 bg-black shadow-2xl flex items-center justify-center shrink-0">
+                <div className="relative w-full aspect-square max-h-[52vh] sm:max-h-[58vh] rounded-3xl overflow-hidden border-4 border-indigo-500 bg-black shadow-2xl flex items-center justify-center shrink-0">
                   {/* Direct Native Video Element */}
                   <video
                     ref={videoRef}
@@ -624,16 +624,16 @@ function KioskContent() {
 
                   {/* Neon HUD overlay elements (only active when camera is live and no modal is open) */}
                   {!overlayResult && !cameraLoading && !cameraError && (
-                    <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-6 sm:p-8 z-10">
+                    <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-5 sm:p-8 z-10">
                       <div className="flex justify-between">
-                        <div className="w-14 h-14 border-t-4 border-l-4 border-indigo-400 rounded-2xl"></div>
-                        <div className="w-14 h-14 border-t-4 border-r-4 border-indigo-400 rounded-tr-2xl"></div>
+                        <div className="w-12 sm:w-14 h-12 sm:h-14 border-t-4 border-l-4 border-indigo-400 rounded-2xl"></div>
+                        <div className="w-12 sm:w-14 h-12 sm:h-14 border-t-4 border-r-4 border-indigo-400 rounded-tr-2xl"></div>
                       </div>
                       {/* Scanner scanning bar indicator */}
                       <div className="w-full h-1.5 bg-indigo-400 opacity-90 shadow-[0_0_20px_#818cf8] animate-scan-line"></div>
                       <div className="flex justify-between">
-                        <div className="w-14 h-14 border-b-4 border-l-4 border-indigo-400 rounded-bl-2xl"></div>
-                        <div className="w-14 h-14 border-b-4 border-r-4 border-indigo-400 rounded-br-2xl"></div>
+                        <div className="w-12 sm:w-14 h-12 sm:h-14 border-b-4 border-l-4 border-indigo-400 rounded-bl-2xl"></div>
+                        <div className="w-12 sm:w-14 h-12 sm:h-14 border-b-4 border-r-4 border-indigo-400 rounded-br-2xl"></div>
                       </div>
                     </div>
                   )}
@@ -642,53 +642,53 @@ function KioskContent() {
                   {overlayResult && (
                     <div className="absolute inset-0 z-30 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-scale-up">
                       {overlayResult.type === "success" ? (
-                        <div className="w-full rounded-3xl border-3 border-[#32D74B] bg-[#1E1E1E] p-6 text-center space-y-4 shadow-2xl shadow-emerald-950/80">
-                          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-950/80 border-2 border-[#32D74B] animate-bounce-slow">
-                            <CheckCircle2 className="h-10 w-10 text-[#32D74B]" />
+                        <div className="w-full rounded-3xl border-3 border-[#32D74B] bg-[#1E1E1E] p-5 sm:p-6 text-center space-y-3 sm:space-y-4 shadow-2xl shadow-emerald-950/80">
+                          <div className="mx-auto flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-emerald-950/80 border-2 border-[#32D74B] animate-bounce-slow">
+                            <CheckCircle2 className="h-8 w-8 sm:h-10 sm:w-10 text-[#32D74B]" />
                           </div>
 
-                          <div className="space-y-1">
+                          <div className="space-y-0.5 sm:space-y-1">
                             {overlayResult.number && (
-                              <p className="text-lg font-mono font-extrabold text-slate-400">{overlayResult.number}</p>
+                              <p className="text-base sm:text-lg font-mono font-extrabold text-slate-400">{overlayResult.number}</p>
                             )}
-                            <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-white leading-tight">{overlayResult.name}</h2>
+                            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">{overlayResult.name}</h2>
                           </div>
 
-                          <div className="py-3 px-4 bg-[#121212] border-2 border-[#2C2C2E] rounded-2xl text-lg font-bold text-[#32D74B] font-mono">
+                          <div className="py-2.5 sm:py-3 px-4 bg-[#121212] border-2 border-[#2C2C2E] rounded-2xl text-base sm:text-lg font-bold text-[#32D74B] font-mono">
                             {overlayResult.message}
                           </div>
 
                           {/* 1s Progress shrink bar */}
-                          <div className="w-full space-y-2 pt-1">
-                            <div className="flex justify-between items-center text-sm font-bold text-slate-400">
+                          <div className="w-full space-y-1.5 pt-1">
+                            <div className="flex justify-between items-center text-xs sm:text-sm font-bold text-slate-400">
                               <span>다음 학생 스캔 준비</span>
                               <span className="font-mono font-black text-white">1초</span>
                             </div>
-                            <div className="w-full h-3 bg-[#121212] rounded-full overflow-hidden">
+                            <div className="w-full h-2.5 sm:h-3 bg-[#121212] rounded-full overflow-hidden">
                               <div className="h-full bg-[#32D74B] rounded-full animate-shrink-1s"></div>
                             </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="w-full rounded-3xl border-3 border-[#FF453A] bg-[#1E1E1E] p-6 text-center space-y-4 shadow-2xl shadow-rose-950/80 animate-shake">
-                          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-950/80 border-2 border-[#FF453A]">
-                            <AlertTriangle className="h-10 w-10 text-[#FF453A]" />
+                        <div className="w-full rounded-3xl border-3 border-[#FF453A] bg-[#1E1E1E] p-5 sm:p-6 text-center space-y-3 sm:space-y-4 shadow-2xl shadow-rose-950/80 animate-shake">
+                          <div className="mx-auto flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-rose-950/80 border-2 border-[#FF453A]">
+                            <AlertTriangle className="h-8 w-8 sm:h-10 sm:w-10 text-[#FF453A]" />
                           </div>
 
-                          <div className="space-y-2">
-                            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">{overlayResult.title || "등록 오류"}</h2>
-                            <p className="text-sm sm:text-base text-[#FF453A] bg-[#121212] p-3.5 rounded-2xl border border-rose-900/40 leading-relaxed font-bold">
+                          <div className="space-y-1.5 sm:space-y-2">
+                            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">{overlayResult.title || "등록 오류"}</h2>
+                            <p className="text-xs sm:text-sm md:text-base text-[#FF453A] bg-[#121212] p-3 sm:p-3.5 rounded-2xl border border-rose-900/40 leading-relaxed font-bold">
                               {overlayResult.message}
                             </p>
                           </div>
 
                           {/* 1.5s Progress shrink bar */}
-                          <div className="w-full space-y-2 pt-1">
-                            <div className="flex justify-between items-center text-sm font-bold text-slate-400">
+                          <div className="w-full space-y-1.5 pt-1">
+                            <div className="flex justify-between items-center text-xs sm:text-sm font-bold text-slate-400">
                               <span>스캐너 자동 복귀</span>
                               <span className="font-mono font-black text-white">1.5초</span>
                             </div>
-                            <div className="w-full h-3 bg-[#121212] rounded-full overflow-hidden">
+                            <div className="w-full h-2.5 sm:h-3 bg-[#121212] rounded-full overflow-hidden">
                               <div className="h-full bg-[#FF453A] rounded-full animate-shrink-15s"></div>
                             </div>
                           </div>
@@ -700,24 +700,24 @@ function KioskContent() {
 
                 {/* Bottom Controls Area - Large full-width touch targets */}
                 <div className="w-full space-y-2 shrink-0">
-                  <p className="text-center text-xs font-bold text-indigo-300/90 py-0.5">
+                  <p className="text-center text-[11px] sm:text-xs font-bold text-indigo-300/90 py-0.5">
                     💡 20~30cm 거리에서 비추면 가장 선명하고 빠르게 인식됩니다.
                   </p>
 
                   {/* Manual input row */}
-                  <form onSubmit={handleManualSubmit} className="flex gap-2.5 items-center bg-[#1E1E1E] p-2.5 rounded-2xl border-2 border-[#2C2C2E] shadow-xl">
+                  <form onSubmit={handleManualSubmit} className="flex gap-2 sm:gap-2.5 items-center bg-[#1E1E1E] p-2 sm:p-2.5 rounded-2xl border-2 border-[#2C2C2E] shadow-xl">
                     <Input
                       type="text"
                       placeholder="학번/QR 직접 입력 (예: 60101)"
                       value={manualInput}
                       onChange={(e) => setManualInput(e.target.value)}
                       disabled={manualPending}
-                      className="flex-1 bg-[#121212] border-[#2C2C2E] text-white text-base sm:text-lg placeholder:text-slate-500 h-13 sm:h-14 rounded-xl px-4 font-bold"
+                      className="flex-1 bg-[#121212] border-[#2C2C2E] text-white text-sm sm:text-base md:text-lg placeholder:text-slate-500 h-11 sm:h-13 rounded-xl px-3 sm:px-4 font-bold"
                     />
                     <Button
                       type="submit"
                       disabled={manualPending || !manualInput.trim()}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-black text-base sm:text-lg h-13 sm:h-14 px-6 sm:px-7 rounded-xl shadow-md"
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm sm:text-base md:text-lg h-11 sm:h-13 px-4 sm:px-6 rounded-xl shadow-md"
                     >
                       입력
                     </Button>
@@ -727,9 +727,9 @@ function KioskContent() {
                   <Button
                     onClick={() => setScanState("idle")}
                     variant="outline"
-                    className="w-full border-2 border-[#2C2C2E] bg-[#1E1E1E] text-slate-200 hover:bg-[#2C2C2E] hover:text-white py-3.5 h-13 sm:h-14 rounded-2xl text-base sm:text-lg font-black gap-2.5 shadow-xl active:scale-[0.98] transition-all"
+                    className="w-full border-2 border-[#2C2C2E] bg-[#1E1E1E] text-slate-200 hover:bg-[#2C2C2E] hover:text-white h-11 sm:h-13 rounded-2xl text-sm sm:text-base font-black gap-2 shadow-xl active:scale-[0.98] transition-all"
                   >
-                    <EyeOff className="h-5 w-5" />
+                    <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span>스캔 중지 (대시보드로 복귀)</span>
                   </Button>
                 </div>

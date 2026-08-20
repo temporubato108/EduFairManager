@@ -826,7 +826,7 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
               border: 1.5px solid #e2e8f0;
               border-radius: 8px;
               padding: 3px;
-              margin: 1mm 0 2mm 0;
+              margin: 10px 0 2mm 0;
             }
             .qr-container img {
               width: 54mm;
@@ -835,17 +835,17 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
             }
             .student-info {
               text-align: center;
-              margin-top: 1mm;
+              margin-top: 20px;
               margin-bottom: 2mm;
             }
             .student-number {
-              font-size: 12px;
-              font-weight: 700;
+              font-size: 15px;
+              font-weight: 800;
               color: #4f46e5;
-              margin-bottom: 1px;
+              margin-bottom: 10px;
             }
             .student-name {
-              font-size: 22px;
+              font-size: 23px;
               font-weight: 900;
               color: #0f172a;
               letter-spacing: -0.5px;
@@ -1181,7 +1181,7 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
           ctx.fillText(trimmedEvent, innerX + innerW / 2, innerY + 68);
 
           // 4. School Logo Area (Above QR Code)
-          let qrY = innerY + headerHeight + 35;
+          let qrY = innerY + headerHeight + 65;
           if (schoolLogoImg) {
             const logoMaxW = 460;
             const logoMaxH = 120;
@@ -1195,7 +1195,7 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
             const lx = innerX + (innerW - lw) / 2;
             const ly = innerY + headerHeight + 15 + (120 - lh) / 2;
             ctx.drawImage(schoolLogoImg, lx, ly, lw, lh);
-            qrY = innerY + headerHeight + 155;
+            qrY = innerY + headerHeight + 185;
           }
 
           // 5. Generate and draw Pure HD QR Code (~55mm x 55mm = 650px)
@@ -1221,13 +1221,13 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
           ctx.drawImage(qrCanvas, qrX, qrY, qrDisplaySize, qrDisplaySize);
 
           // 6. Student Info (Below QR Code)
-          const studentNumY = qrY + qrDisplaySize + 55;
+          const studentNumY = qrY + qrDisplaySize + 115;
           ctx.fillStyle = "#4f46e5";
-          ctx.font = "bold 36px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
           ctx.textAlign = "center";
           ctx.fillText(String(student.student_number || ""), innerX + innerW / 2, studentNumY);
 
-          const studentNameY = studentNumY + 68;
+          const studentNameY = studentNumY + 100;
           ctx.fillStyle = "#0f172a";
           ctx.font = "bold 70px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
           ctx.textAlign = "center";
@@ -1745,8 +1745,8 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
                     <div className="pt-1" />
                   )}
                   
-                  {/* QR Display area */}
-                  <div className="px-3 py-1.5 flex items-center justify-center">
+                  {/* QR Display area (10px down) */}
+                  <div className="px-3 py-1.5 pt-[10px] flex items-center justify-center">
                     <div className="p-1.5 bg-white rounded-xl border border-slate-200 shadow-xs inline-block">
                       {studentQrDataUrl ? (
                         <img src={studentQrDataUrl} alt={`${viewingQrStudent.name} QR`} className="w-36 h-36 object-contain" />
@@ -1758,10 +1758,10 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
                     </div>
                   </div>
 
-                  {/* Student Info below QR */}
-                  <div className="pt-1 pb-2 space-y-0.5">
-                    <p className="text-xs font-bold text-indigo-600 font-mono">{viewingQrStudent.student_number}</p>
-                    <h3 className="text-xl font-black text-slate-900 tracking-tight">{viewingQrStudent.name}</h3>
+                  {/* Student Info below QR (Student Number 20px down, Name 30px down) */}
+                  <div className="pt-[20px] pb-2 space-y-0">
+                    <p className="text-sm font-black text-indigo-600 font-mono tracking-tight">{viewingQrStudent.student_number}</p>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight pt-[10px]">{viewingQrStudent.name}</h3>
                   </div>
 
                   <div className="py-2 px-1 text-[9px] text-slate-500 space-y-0.5 mt-auto border-t border-slate-100">

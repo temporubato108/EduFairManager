@@ -83,6 +83,12 @@ export async function getLogsAction(
 ) {
   try {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: true, data: [] };
+
+    const { getEventsAction } = await import("@/app/events/actions");
+    const userEvents = await getEventsAction();
+    const userEventIds = userEvents.map((e) => e.id);
 
     let query = supabase
       .from("logs")
@@ -91,8 +97,16 @@ export async function getLogsAction(
     // Event Filter
     if (eventId === "null") {
       query = query.is("event_id", null);
+      query = query.or(`operator_id.eq.${user.id},user_id.eq.${user.id}`);
     } else if (eventId !== "all" && eventId) {
       query = query.eq("event_id", eventId);
+    } else {
+      // eventId === "all"
+      if (userEventIds.length > 0) {
+        query = query.or(`event_id.in.(${userEventIds.join(",")}),operator_id.eq.${user.id},user_id.eq.${user.id}`);
+      } else {
+        query = query.or(`operator_id.eq.${user.id},user_id.eq.${user.id}`);
+      }
     }
 
     // Action Type Filter

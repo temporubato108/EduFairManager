@@ -16,7 +16,7 @@ import { isValidSchoolLogo, cleanSchoolName } from "@/lib/utils";
 
 export async function getSettingsAction(): Promise<SystemSettings> {
   const defaultSettings: SystemSettings = {
-    school_name: "미래초등학교",
+    school_name: "EduFair Admin",
     school_logo: "",
     qr_size: "150",
     sound_effects_enabled: "true",
@@ -26,6 +26,8 @@ export async function getSettingsAction(): Promise<SystemSettings> {
 
   try {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
     const { data, error } = await supabase.from("settings").select("key, value");
     if (error) throw new Error(error.message);
 
@@ -54,6 +56,11 @@ export async function getSettingsAction(): Promise<SystemSettings> {
       });
     }
 
+    // Prioritize currently logged in user's school name from metadata
+    if (user?.user_metadata?.school_name) {
+      settings.school_name = user.user_metadata.school_name;
+    }
+
     settings.school_name = cleanSchoolName(settings.school_name);
 
     if (!isValidSchoolLogo(settings.school_logo)) {
@@ -71,9 +78,21 @@ export async function getSettingsAction(): Promise<SystemSettings> {
 export async function saveSettingsAction(settings: Partial<SystemSettings>) {
   try {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (settings.school_name !== undefined) {
       settings.school_name = cleanSchoolName(settings.school_name);
+      
+      // Update user_metadata if user is logged in
+      if (user) {
+        try {
+          await supabase.auth.updateUser({
+            data: { school_name: settings.school_name },
+          });
+        } catch {
+          // ignore
+        }
+      }
     }
 
     // Prepare upsert payload

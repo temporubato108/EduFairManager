@@ -22,8 +22,7 @@ import { useState, useEffect, useTransition } from "react";
 import { logoutAction } from "@/app/login/actions";
 import { supabase } from "@/lib/supabase/client";
 
-import { getCachedSettings, setCachedSettings } from "@/lib/cache";
-
+import { setCachedSettings, clearClientCache } from "@/lib/cache";
 import { isValidSchoolLogo, cleanSchoolName } from "@/lib/utils";
 
 interface SidebarProps {
@@ -44,28 +43,30 @@ export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const cached = getCachedSettings();
-  const [schoolName, setSchoolName] = useState(cached ? cleanSchoolName(cached.schoolName) : "EduFair Admin");
-  const [schoolLogo, setSchoolLogo] = useState(cached && isValidSchoolLogo(cached.schoolLogo) ? cached.schoolLogo : "");
+  const [schoolName, setSchoolName] = useState("EduFair Admin");
+  const [schoolLogo, setSchoolLogo] = useState("");
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     async function loadSettings() {
-      const existing = getCachedSettings();
-      if (existing) {
-        setSchoolName(cleanSchoolName(existing.schoolName));
-        setSchoolLogo(isValidSchoolLogo(existing.schoolLogo) ? existing.schoolLogo : "");
-        return;
-      }
-
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+        let name = "";
+        if (user?.user_metadata?.school_name) {
+          name = cleanSchoolName(user.user_metadata.school_name);
+        }
+
         const { data } = await supabase
           .from("settings")
           .select("key, value");
+
+        let validLogo = "";
         if (data) {
           const nameRow = data.find((r) => r.key === "school_name");
           const logoRow = data.find((r) => r.key === "school_logo");
-          const name = cleanSchoolName(nameRow?.value || "EduFair Admin");
+          if (!name) {
+            name = cleanSchoolName(nameRow?.value || "EduFair Admin");
+          }
           
           let rawLogo = logoRow?.value;
           if (typeof rawLogo === "string") {
@@ -77,12 +78,14 @@ export function Sidebar({ onClose }: SidebarProps) {
               // raw
             }
           }
-          const validLogo = isValidSchoolLogo(rawLogo) ? String(rawLogo).trim() : "";
-
-          setSchoolName(name);
-          setSchoolLogo(validLogo);
-          setCachedSettings({ schoolName: name, schoolLogo: validLogo });
+          validLogo = isValidSchoolLogo(rawLogo) ? String(rawLogo).trim() : "";
         }
+
+        if (!name) name = "EduFair Admin";
+
+        setSchoolName(name);
+        setSchoolLogo(validLogo);
+        setCachedSettings({ schoolName: name, schoolLogo: validLogo });
       } catch (err) {
         console.error(err);
       }
@@ -91,6 +94,7 @@ export function Sidebar({ onClose }: SidebarProps) {
   }, []);
 
   const handleLogout = () => {
+    clearClientCache();
     startTransition(async () => {
       await logoutAction();
     });

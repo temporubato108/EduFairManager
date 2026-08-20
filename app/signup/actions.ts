@@ -59,8 +59,15 @@ export async function signupAction(
       return { error: `이미 사용 중인 아이디입니다: '${username}'. 다른 아이디를 입력해주세요.` };
     }
 
+    // Clear any previous stale session cookies first
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // ignore
+    }
+
     // 2. Create User via Admin API (Pre-confirmed, zero email rate limit)
-    const { error: createError } = await adminSupabase.auth.admin.createUser({
+    const { data: createdUserData, error: createError } = await adminSupabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -83,6 +90,19 @@ export async function signupAction(
       return { error: `회원가입 실패: ${createError.message}` };
     }
 
+    // Register teacher record for the new administrator
+    if (createdUserData?.user?.id) {
+      try {
+        await adminSupabase.from("teachers").upsert({
+          id: createdUserData.user.id,
+          name: username,
+          role: "admin",
+        });
+      } catch {
+        // non-fatal
+      }
+    }
+
     // 3. Immediately sign in the new user in client session
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
@@ -93,16 +113,16 @@ export async function signupAction(
       return { error: `가입 완료 후 로그인 실패: ${signInError.message}` };
     }
 
-    // 3. Save school name into system settings
+    // 4. Save school name into system settings
     try {
       await saveSettingsAction({ school_name: schoolName });
     } catch {
       // Non-critical fallback
     }
 
-    // 4. Log creation
+    // 5. Log creation
     const { recordLogAction } = await import("@/app/logs/actions");
-    await recordLogAction(null, "signup", `신규 학교 관리자 가입 완료: 학교명='${schoolName}', 아이디='${username}', 지역='${region}'`);
+    await recordLogAction(null, "signup", `신규 학교 가입 완료: 학교명='${schoolName}', 아이디='${username}', 지역='${region}'`);
 
   } catch (err) {
     const errorObj = err as Error;

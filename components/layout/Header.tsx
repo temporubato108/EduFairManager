@@ -8,7 +8,8 @@ import { useTransition } from "react";
 import { logoutAction } from "@/app/login/actions";
 import { supabase } from "@/lib/supabase/client";
 
-import { getCachedUser, setCachedUser, clearClientCache } from "@/lib/cache";
+import { setCachedUser, clearClientCache } from "@/lib/cache";
+import { extractUsername } from "@/lib/auth-helpers";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -16,19 +17,11 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const [isPending, startTransition] = useTransition();
-  const cached = getCachedUser();
-  const [userName, setUserName] = useState(cached ? cached.userName : "교사");
-  const [role, setRole] = useState(cached ? cached.role : "부스 운영교사");
+  const [userName, setUserName] = useState("관리자");
+  const [role, setRole] = useState("학교 관리자");
 
   useEffect(() => {
     async function loadUser() {
-      const existing = getCachedUser();
-      if (existing) {
-        setUserName(existing.userName);
-        setRole(existing.role);
-        return;
-      }
-
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -38,14 +31,15 @@ export function Header({ onMenuClick }: HeaderProps) {
             .eq("id", user.id)
             .single();
 
-          const resolvedName = teacher ? teacher.name : (user.email || "교사");
+          const username = user.user_metadata?.username || (teacher?.name) || extractUsername(user.email || "관리자");
+          const schoolName = user.user_metadata?.school_name || "";
           const resolvedRole = (teacher?.role === "admin" || user.user_metadata?.role === "admin")
             ? "관리자"
             : "부스 운영교사";
 
-          setUserName(resolvedName);
-          setRole(resolvedRole);
-          setCachedUser({ userName: resolvedName, role: resolvedRole });
+          setUserName(username);
+          setRole(schoolName ? `${schoolName} (${resolvedRole})` : resolvedRole);
+          setCachedUser({ userName: username, role: schoolName ? `${schoolName} (${resolvedRole})` : resolvedRole });
         }
       } catch (err) {
         console.error(err);
@@ -55,6 +49,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   }, []);
 
   const handleLogout = () => {
+    clearClientCache();
     startTransition(async () => {
       await logoutAction();
     });

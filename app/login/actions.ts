@@ -45,13 +45,6 @@ export async function loginAction(
     }
   }
 
-  // Clear any existing stale session cookies first
-  try {
-    await supabase.auth.signOut();
-  } catch {
-    // ignore
-  }
-
   let authData: { user: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null } | null = null;
   let lastError: { message?: string } | null = null;
 

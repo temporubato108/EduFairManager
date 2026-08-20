@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { parseBoothOperator } from "@/lib/utils";
 
 export interface BoothRanking {
   boothId: string;
@@ -28,7 +29,9 @@ export interface DashboardData {
 
 interface BoothJoined {
   name: string;
-  operator: { name: string } | null;
+  operator_name?: string | null;
+  description?: string | null;
+  operator?: { name: string } | null;
 }
 
 interface StudentJoined {
@@ -65,10 +68,10 @@ export async function getAdminDashboardDataAction(eventId: string) {
 
     if (tsError) throw new Error(tsError.message);
 
-    // 2. Fetch all participations to aggregate statistics
+    // 2. Fetch all participations with created_at to aggregate statistics
     const { data: participations, error: pError } = await supabase
       .from("participations")
-      .select("id, booth_id, student_id, booth:booths(name, operator:teachers(name)), student:students(name, student_number)")
+      .select("id, created_at, booth_id, student_id, booth:booths(name, operator_name, description, operator:teachers(name)), student:students(name, student_number)")
       .eq("event_id", eventId);
 
     if (pError) throw new Error(pError.message);
@@ -98,7 +101,8 @@ export async function getAdminDashboardDataAction(eventId: string) {
 
       const boothData = p.booth as unknown as BoothJoined | null;
       const bName = boothData ? boothData.name : "알 수 없는 부스";
-      const opName = boothData && boothData.operator ? boothData.operator.name : "미지정";
+      const parsedBooth = boothData ? parseBoothOperator(boothData) : { operator_name: "미지정" };
+      const opName = parsedBooth.operator_name;
 
       if (!boothMap[bId]) {
         boothMap[bId] = { name: bName, operatorName: opName, count: 0 };
@@ -117,11 +121,11 @@ export async function getAdminDashboardDataAction(eventId: string) {
       .slice(0, 5);
 
     // 6. Format recent participations (last 6 items)
-    // Sort in-memory to ensure correct chronological order from db select
+    // Sort chronologically by actual created_at timestamp
     const sortedRecent = [...rows]
       .sort((a, b) => {
-        const timeA = new Date((a as unknown as { scanned_at?: string; created_at?: string }).created_at || (a as unknown as { scanned_at?: string; created_at?: string }).scanned_at || 0).getTime();
-        const timeB = new Date((b as unknown as { scanned_at?: string; created_at?: string }).created_at || (b as unknown as { scanned_at?: string; created_at?: string }).scanned_at || 0).getTime();
+        const timeA = new Date(a.created_at || 0).getTime();
+        const timeB = new Date(b.created_at || 0).getTime();
         return timeB - timeA;
       })
       .slice(0, 6);
@@ -134,11 +138,9 @@ export async function getAdminDashboardDataAction(eventId: string) {
       const boothData = r.booth as unknown as BoothJoined | null;
       const bName = boothData ? boothData.name : "알 수 없는 부스";
 
-      const ts = (r as unknown as { scanned_at?: string; created_at?: string }).created_at || (r as unknown as { scanned_at?: string; created_at?: string }).scanned_at || new Date().toISOString();
-
       return {
         id: r.id,
-        createdAt: ts,
+        createdAt: r.created_at || new Date().toISOString(),
         studentName: sName,
         studentNumber: sNum,
         boothName: bName,

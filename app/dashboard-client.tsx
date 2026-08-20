@@ -379,7 +379,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
                                   {idx + 1}
                                 </span>
                                 <span className="font-semibold text-slate-800 dark:text-white">{booth.name}</span>
-                                <span className="text-[10px] text-slate-400">({booth.operatorName} 교사)</span>
+                                <span className="text-[10px] text-slate-400 font-medium">({booth.operatorName !== "미지정" ? booth.operatorName : "교사 미지정"})</span>
                               </div>
                               <span className="font-mono font-bold text-slate-700 dark:text-indigo-300">
                                 {booth.count}회

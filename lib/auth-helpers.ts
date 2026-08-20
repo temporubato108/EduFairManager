@@ -53,7 +53,7 @@ export function formatUsernameToEmail(input: string): string {
   if (clean.includes("@")) {
     return clean;
   }
-  return `${clean}@edufair.local`;
+  return `${clean}@edufair.kr`;
 }
 
 /**
@@ -61,6 +61,9 @@ export function formatUsernameToEmail(input: string): string {
  */
 export function extractUsername(emailOrUsername: string): string {
   const clean = (emailOrUsername || "").trim();
+  if (clean.endsWith("@edufair.kr")) {
+    return clean.replace("@edufair.kr", "");
+  }
   if (clean.endsWith("@edufair.local")) {
     return clean.replace("@edufair.local", "");
   }

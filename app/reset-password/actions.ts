@@ -39,8 +39,6 @@ export async function resetPasswordWithPinAction(
     return { error: "새 비밀번호와 비밀번호 확인이 일치하지 않습니다." };
   }
 
-  const email = formatUsernameToEmail(username);
-
   try {
     const adminSupabase = createAdminClient();
 
@@ -50,8 +48,17 @@ export async function resetPasswordWithPinAction(
       return { error: `사용자 목록 조회 실패: ${listError.message}` };
     }
 
+    const cleanId = username.toLowerCase();
+    const candidateEmails = [
+      formatUsernameToEmail(cleanId),
+      `${cleanId}@edufair.kr`,
+      `${cleanId}@school.kr`,
+      `${cleanId}@school.es.kr`,
+      `${cleanId}@edufair.local`,
+    ];
+
     const targetUser = userList.users.find(
-      (u) => u.email?.toLowerCase() === email.toLowerCase()
+      (u) => u.email && candidateEmails.includes(u.email.toLowerCase())
     );
 
     if (!targetUser) {

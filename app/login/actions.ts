@@ -34,12 +34,14 @@ export async function loginAction(
     // 1. If 'admin', prioritize 'admin@school.kr' legacy account
     if (cleanId === "admin") {
       candidateEmails.push("admin@school.kr");
-      candidateEmails.push("admin@edufair.local");
+      candidateEmails.push("admin@edufair.kr");
       candidateEmails.push("admin@school.es.kr");
+      candidateEmails.push("admin@edufair.local");
     } else {
       candidateEmails.push(formatUsernameToEmail(cleanId));
       candidateEmails.push(`${cleanId}@school.kr`);
       candidateEmails.push(`${cleanId}@school.es.kr`);
+      candidateEmails.push(`${cleanId}@edufair.local`);
     }
   }
 

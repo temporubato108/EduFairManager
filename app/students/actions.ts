@@ -17,63 +17,113 @@ export interface Student {
   created_at: string;
 }
 
-function parseStudentNumber(numStr: string) {
-  if (!numStr) return { grade: 999, classNum: 999, number: 999 };
+interface ParsedStudentNumber {
+  isExternal: boolean;
+  affiliation: string;
+  grade: number;
+  classNum: number;
+  number: number;
+}
 
-  if (numStr.startsWith("[외부]") || numStr.includes("외부") || numStr.includes("게스트")) {
-    const matchNum = numStr.match(/(\d+)\s*번?/);
-    const num = matchNum ? parseInt(matchNum[1], 10) : 0;
-    return { grade: 100, classNum: 1, number: num };
+function parseStudentNumber(numStr: string): ParsedStudentNumber {
+  if (!numStr) {
+    return { isExternal: false, affiliation: "", grade: 999, classNum: 999, number: 999 };
   }
 
+  // 1. External students (e.g. "[외부] 용산초 1번", "[외부] 유치원 다솜반 1번", "[외부] 1번")
+  if (numStr.startsWith("[외부]") || numStr.includes("외부") || numStr.includes("게스트")) {
+    let affiliation = "일반";
+
+    if (numStr.startsWith("[외부]")) {
+      const after = numStr.replace(/^\[외부\]\s*/, "").trim();
+      const matchText = after.match(/^([^0-9]+)/);
+      if (matchText && matchText[1].trim()) {
+        affiliation = matchText[1].trim();
+      }
+    } else {
+      const matchBracket = numStr.match(/\[([^\]]+)\]/);
+      if (matchBracket && matchBracket[1].trim()) {
+        affiliation = matchBracket[1].trim();
+      }
+    }
+
+    const matchNum = numStr.match(/(\d+)\s*번?/);
+    const num = matchNum ? parseInt(matchNum[1], 10) : 0;
+
+    return {
+      isExternal: true,
+      affiliation,
+      grade: 999,
+      classNum: 999,
+      number: num,
+    };
+  }
+
+  // 2. Korean standard format: "1학년 2반 3번"
   const matchKorean = numStr.match(/(\d+)\s*학년\s*(\d+)\s*반(?:\s*(\d+)\s*번)?/);
   if (matchKorean) {
     return {
+      isExternal: false,
+      affiliation: "",
       grade: parseInt(matchKorean[1], 10),
       classNum: parseInt(matchKorean[2], 10),
       number: matchKorean[3] ? parseInt(matchKorean[3], 10) : 0,
     };
   }
 
+  // 3. Dash format: "1-2-3"
   const matchDash = numStr.match(/^(\d+)[-_](\d+)[-_](\d+)$/);
   if (matchDash) {
     return {
+      isExternal: false,
+      affiliation: "",
       grade: parseInt(matchDash[1], 10),
       classNum: parseInt(matchDash[2], 10),
       number: parseInt(matchDash[3], 10),
     };
   }
 
+  // 4. 5-digit number format: "10203"
   if (/^\d{5}$/.test(numStr)) {
     return {
+      isExternal: false,
+      affiliation: "",
       grade: parseInt(numStr[0], 10),
       classNum: parseInt(numStr.substring(1, 3), 10),
       number: parseInt(numStr.substring(3, 5), 10),
     };
   }
 
+  // 5. 4-digit number format: "1203"
   if (/^\d{4}$/.test(numStr)) {
     return {
+      isExternal: false,
+      affiliation: "",
       grade: parseInt(numStr[0], 10),
-      classNum: parseInt(numStr[1], 10),
+      classNum: parseInt(numStr.substring(1, 2), 10),
       number: parseInt(numStr.substring(2, 4), 10),
     };
   }
 
+  // 6. Fallback numbers
   const nums = numStr.match(/\d+/g);
   if (nums && nums.length >= 3) {
     return {
+      isExternal: false,
+      affiliation: "",
       grade: parseInt(nums[0], 10),
       classNum: parseInt(nums[1], 10),
       number: parseInt(nums[2], 10),
     };
   }
 
-  return { grade: 999, classNum: 999, number: 999 };
+  return { isExternal: false, affiliation: "", grade: 999, classNum: 999, number: 999 };
 }
 
 /**
- * Fetch all active students for a specific event sorted naturally by grade, class, and number
+ * Fetch all active students for a specific event sorted naturally:
+ * 1. Regular students: Grade -> Class -> Number
+ * 2. External students: Affiliation -> Number
  */
 export async function getStudentsAction(eventId: string): Promise<Student[]> {
   const supabase = await createClient();
@@ -90,6 +140,21 @@ export async function getStudentsAction(eventId: string): Promise<Student[]> {
   const students = (data || []).sort((a, b) => {
     const pA = parseStudentNumber(a.student_number);
     const pB = parseStudentNumber(b.student_number);
+
+    // 1. Regular students come before external participants
+    if (pA.isExternal !== pB.isExternal) {
+      return pA.isExternal ? 1 : -1;
+    }
+
+    // 2. Both external: group by Affiliation first, then Number
+    if (pA.isExternal && pB.isExternal) {
+      const affDiff = pA.affiliation.localeCompare(pB.affiliation, "ko");
+      if (affDiff !== 0) return affDiff;
+      if (pA.number !== pB.number) return pA.number - pB.number;
+      return a.name.localeCompare(b.name, "ko");
+    }
+
+    // 3. Both regular: Grade -> Class -> Number
     if (pA.grade !== pB.grade) return pA.grade - pB.grade;
     if (pA.classNum !== pB.classNum) return pA.classNum - pB.classNum;
     if (pA.number !== pB.number) return pA.number - pB.number;

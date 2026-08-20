@@ -204,12 +204,13 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     }
   }, [viewingQrStudent]);
 
-  // Helper: Extract class label (e.g. "1학년 2반", "[외부] 경운유치원") from student_number
+  // Helper: Extract class label (e.g. "1학년 2반", "[외부] 용산초", "[외부] 유치원 다솜반") from student_number
   const getClassLabel = (studentNumber: string) => {
     if (!studentNumber) return "기타";
     if (studentNumber.startsWith("[외부]")) {
-      const match = studentNumber.match(/\[외부\]\s*([^0-9]+)?/);
-      const org = match && match[1] ? match[1].trim() : "";
+      const after = studentNumber.replace(/^\[외부\]\s*/, "").trim();
+      const matchText = after.match(/^([^0-9]+)/);
+      const org = matchText && matchText[1] ? matchText[1].trim() : "";
       return org ? `[외부] ${org}` : "[외부] 일반";
     }
     if (studentNumber.includes("외부") || studentNumber.includes("게스트")) {
@@ -236,19 +237,35 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     return "기타 학급";
   };
 
-  // Helper: Parse student number for natural ordering (학년 -> 반 -> 번호)
+  // Helper: Parse student number for natural ordering
   const parseStudentNumber = (numStr: string) => {
-    if (!numStr) return { grade: 999, classNum: 999, number: 999 };
+    if (!numStr) return { isExternal: false, affiliation: "", grade: 999, classNum: 999, number: 999 };
 
     if (numStr.startsWith("[외부]") || numStr.includes("외부") || numStr.includes("게스트")) {
+      let affiliation = "일반";
+      if (numStr.startsWith("[외부]")) {
+        const after = numStr.replace(/^\[외부\]\s*/, "").trim();
+        const matchText = after.match(/^([^0-9]+)/);
+        if (matchText && matchText[1].trim()) {
+          affiliation = matchText[1].trim();
+        }
+      } else {
+        const matchBracket = numStr.match(/\[([^\]]+)\]/);
+        if (matchBracket && matchBracket[1].trim()) {
+          affiliation = matchBracket[1].trim();
+        }
+      }
+
       const matchNum = numStr.match(/(\d+)\s*번?/);
       const num = matchNum ? parseInt(matchNum[1], 10) : 0;
-      return { grade: 100, classNum: 1, number: num };
+      return { isExternal: true, affiliation, grade: 999, classNum: 999, number: num };
     }
 
     const matchKorean = numStr.match(/(\d+)\s*학년\s*(\d+)\s*반(?:\s*(\d+)\s*번)?/);
     if (matchKorean) {
       return {
+        isExternal: false,
+        affiliation: "",
         grade: parseInt(matchKorean[1], 10),
         classNum: parseInt(matchKorean[2], 10),
         number: matchKorean[3] ? parseInt(matchKorean[3], 10) : 0,
@@ -258,6 +275,8 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     const matchDash = numStr.match(/^(\d+)[-_](\d+)[-_](\d+)$/);
     if (matchDash) {
       return {
+        isExternal: false,
+        affiliation: "",
         grade: parseInt(matchDash[1], 10),
         classNum: parseInt(matchDash[2], 10),
         number: parseInt(matchDash[3], 10),
@@ -266,6 +285,8 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
 
     if (/^\d{5}$/.test(numStr)) {
       return {
+        isExternal: false,
+        affiliation: "",
         grade: parseInt(numStr[0], 10),
         classNum: parseInt(numStr.substring(1, 3), 10),
         number: parseInt(numStr.substring(3, 5), 10),
@@ -274,8 +295,10 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
 
     if (/^\d{4}$/.test(numStr)) {
       return {
+        isExternal: false,
+        affiliation: "",
         grade: parseInt(numStr[0], 10),
-        classNum: parseInt(numStr[1], 10),
+        classNum: parseInt(numStr.substring(1, 2), 10),
         number: parseInt(numStr.substring(2, 4), 10),
       };
     }
@@ -283,19 +306,36 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     const nums = numStr.match(/\d+/g);
     if (nums && nums.length >= 3) {
       return {
+        isExternal: false,
+        affiliation: "",
         grade: parseInt(nums[0], 10),
         classNum: parseInt(nums[1], 10),
         number: parseInt(nums[2], 10),
       };
     }
 
-    return { grade: 999, classNum: 999, number: 999 };
+    return { isExternal: false, affiliation: "", grade: 999, classNum: 999, number: 999 };
   };
 
   const sortStudents = (list: Student[]) => {
     return [...list].sort((a, b) => {
       const pA = parseStudentNumber(a.student_number);
       const pB = parseStudentNumber(b.student_number);
+
+      // 1. Regular students come before external participants
+      if (pA.isExternal !== pB.isExternal) {
+        return pA.isExternal ? 1 : -1;
+      }
+
+      // 2. Both external: group by Affiliation first, then Number
+      if (pA.isExternal && pB.isExternal) {
+        const affDiff = pA.affiliation.localeCompare(pB.affiliation, "ko");
+        if (affDiff !== 0) return affDiff;
+        if (pA.number !== pB.number) return pA.number - pB.number;
+        return a.name.localeCompare(b.name, "ko");
+      }
+
+      // 3. Both regular: Grade -> Class -> Number
       if (pA.grade !== pB.grade) return pA.grade - pB.grade;
       if (pA.classNum !== pB.classNum) return pA.classNum - pB.classNum;
       if (pA.number !== pB.number) return pA.number - pB.number;

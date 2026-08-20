@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { parseBoothOperator } from "@/lib/utils";
 
 export interface StudentInfo {
   id: string;
@@ -17,6 +18,7 @@ export interface StampbookBooth {
   id: string;
   name: string;
   description: string | null;
+  operator_name?: string | null;
 }
 
 export interface LeaderboardEntry {
@@ -93,17 +95,28 @@ export async function getStudentStampbookAction(eventId: string, studentId: stri
       name: event.name,
     };
 
-    // 3. Fetch all active booths for this event
+    // 3. Fetch all active booths for this event with operator info
     const { data: booths, error: bError } = await supabase
       .from("booths")
-      .select("id, name, description")
+      .select("id, name, description, operator:teachers(name)")
       .eq("event_id", eventId)
       .is("deleted_at", null)
       .order("name");
 
     if (bError) throw new Error(bError.message);
 
-    const stampbookBooths = (booths || []) as StampbookBooth[];
+    const stampbookBooths: StampbookBooth[] = (booths || []).map((b) => {
+      const parsed = parseBoothOperator({
+        description: b.description,
+        operator: b.operator as unknown as { name: string } | null,
+      });
+      return {
+        id: b.id,
+        name: b.name,
+        description: parsed.description,
+        operator_name: parsed.operator_name !== "미지정" ? parsed.operator_name : null,
+      };
+    });
 
     // 4. Fetch this student's participations
     const { data: participations, error: pError } = await supabase

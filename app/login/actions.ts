@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { formatUsernameToEmail } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 
 export interface ActionResponse {
@@ -9,19 +10,20 @@ export interface ActionResponse {
 }
 
 /**
- * Server action for user authentication
+ * Server action for user authentication (supports both Username and Email)
  */
 export async function loginAction(
   _prevState: ActionResponse | null,
   formData: FormData
 ): Promise<ActionResponse> {
-  const email = formData.get("email") as string;
+  const identifier = (formData.get("identifier") as string || formData.get("email") as string || "").trim();
   const password = formData.get("password") as string;
 
-  if (!email || !password) {
-    return { error: "이메일과 비밀번호를 모두 입력해주세요." };
+  if (!identifier || !password) {
+    return { error: "아이디와 비밀번호를 모두 입력해주세요." };
   }
 
+  const email = formatUsernameToEmail(identifier);
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -32,7 +34,7 @@ export async function loginAction(
   if (error) {
     // Translate common error messages
     if (error.message.includes("Invalid login credentials")) {
-      return { error: "이메일 또는 비밀번호가 올바르지 않습니다." };
+      return { error: "아이디 또는 비밀번호가 올바르지 않습니다." };
     }
     return { error: error.message };
   }

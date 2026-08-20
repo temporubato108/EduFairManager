@@ -82,7 +82,11 @@ export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
 
   // 1. Instant 0ms bypass for public pages, kiosk, stampbook, static assets, and favicon
-  const isLoginPage = url.pathname.startsWith("/login");
+  const isAuthEntryPage =
+    url.pathname.startsWith("/login") ||
+    url.pathname.startsWith("/signup") ||
+    url.pathname.startsWith("/reset-password");
+
   const isPublicPage =
     url.pathname.startsWith("/stampbook") ||
     url.pathname.startsWith("/kiosk") ||
@@ -94,13 +98,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Quick cookie check: If unauthenticated visitor has no auth cookies and is not on /login, redirect immediately
+  // 2. Quick cookie check: If unauthenticated visitor has no auth cookies and is not on auth entry pages, redirect immediately
   const allCookies = request.cookies.getAll();
   const hasAuthCookie = allCookies.some(
     (c) => c.name.includes("auth-token") || c.name.startsWith("sb-")
   );
 
-  if (!hasAuthCookie && !isLoginPage) {
+  if (!hasAuthCookie && !isAuthEntryPage) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -119,7 +123,7 @@ export async function middleware(request: NextRequest) {
     url.pathname === "/";
 
   if (localUser) {
-    if (isLoginPage) {
+    if (isAuthEntryPage) {
       return NextResponse.redirect(
         new URL(localUser.role === "admin" ? "/" : "/kiosk", request.url)
       );
@@ -163,14 +167,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && !isLoginPage) {
+  if (!user && !isAuthEntryPage) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   if (user) {
     const role = user.user_metadata?.role || "operator";
 
-    if (isLoginPage) {
+    if (isAuthEntryPage) {
       if (role === "admin") {
         return NextResponse.redirect(new URL("/", request.url));
       } else {

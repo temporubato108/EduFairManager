@@ -31,6 +31,7 @@ interface BoothDetail {
   name: string;
   description: string | null;
   event_name: string;
+  event_status?: "ready" | "progress" | "end" | string;
   allow_double_participation: boolean;
   operator_name: string;
   participant_count: number;
@@ -98,36 +99,38 @@ function KioskContent() {
           }
         })
         .catch(() => {
-          setError("부스 정보를 불러오는 중 오류가 발생했습니다.");
+          setError("부스 정보를 불러오는 중 통신 오류가 발생했습니다.");
           setScanState("idle");
         })
         .finally(() => {
           setLoading(false);
         });
-    } else {
-      setBooth(null);
-      setScanState("idle");
     }
   }, [boothId]);
 
-  // Audio synthesizer using Web Audio API
+  // Audio tone generators for instant feedback
   const playSuccessSound = useCallback(() => {
     if (muted) return;
     try {
       const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+      const now = audioCtx.currentTime;
 
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
+      const playTone = (freq: number, start: number, duration: number) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, start);
+        gain.gain.setValueAtTime(0.08, start);
+        gain.gain.exponentialRampToValueAtTime(0.01, start + duration);
+        osc.start(start);
+        osc.stop(start + duration);
+      };
 
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, audioCtx.currentTime); // 880Hz (A5 - Nice high scan beep)
-      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.15);
+      // Upbeat double chime: G5 -> C6
+      playTone(783.99, now, 0.12);
+      playTone(1046.50, now + 0.1, 0.25);
     } catch (err) {
       console.warn("Web Audio API not allowed or blocked by browser policies", err);
     }
@@ -144,9 +147,9 @@ function KioskContent() {
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         
-        osc.type = "sine";
+        osc.type = "sawtooth";
         osc.frequency.setValueAtTime(freq, start);
-        gain.gain.setValueAtTime(0.08, start);
+        gain.gain.setValueAtTime(0.06, start);
         gain.gain.exponentialRampToValueAtTime(0.01, start + duration);
         
         osc.start(start);
@@ -174,7 +177,7 @@ function KioskContent() {
         playErrorSound();
         setOverlayResult({
           type: "error",
-          title: "등록 오류 및 차단",
+          title: res.title || "등록 오류 및 차단",
           message: res.error,
         });
 
@@ -516,11 +519,21 @@ function KioskContent() {
                   <CardTitle className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
                     {booth.name}
                   </CardTitle>
-                  <div className="flex justify-center pt-0.5">
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-0.5">
                     <span className="text-xs sm:text-sm md:text-base text-indigo-300 font-bold px-4 py-1.5 rounded-full bg-indigo-950/90 border border-indigo-700/60 inline-flex items-center gap-2 font-mono shadow-md">
                       <Calendar className="h-4 w-4 text-indigo-400" />
                       {booth.event_name}
                     </span>
+                    {booth.event_status === "ready" && (
+                      <span className="text-xs sm:text-sm font-bold px-3.5 py-1.5 rounded-full bg-amber-950/90 text-amber-300 border border-amber-700/60 font-mono shadow-md">
+                        준비 중
+                      </span>
+                    )}
+                    {booth.event_status === "end" && (
+                      <span className="text-xs sm:text-sm font-bold px-3.5 py-1.5 rounded-full bg-slate-900/90 text-slate-400 border border-slate-700/60 font-mono shadow-md">
+                        행사 종료
+                      </span>
+                    )}
                   </div>
                 </CardHeader>
 

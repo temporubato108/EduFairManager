@@ -5,12 +5,14 @@ import { createAdminClient } from "@/lib/supabase/server";
 interface RecordParticipationResponse {
   success?: boolean;
   error?: string;
+  title?: string;
   studentName?: string;
   studentNumber?: string;
 }
 
 interface EventJoined {
   name: string;
+  status: "ready" | "progress" | "end" | string;
   allow_double_participation: boolean;
 }
 
@@ -85,7 +87,7 @@ export async function recordParticipationAction(
   // 1. Fetch Booth and Event Configuration
   const { data: booth, error: boothError } = await supabase
     .from("booths")
-    .select("*, event:events(name, allow_double_participation)")
+    .select("*, event:events(name, status, allow_double_participation)")
     .eq("id", boothId)
     .is("deleted_at", null)
     .single();
@@ -95,6 +97,37 @@ export async function recordParticipationAction(
   }
 
   const eventId = booth.event_id;
+  const eventData = booth.event as unknown as EventJoined | null;
+  const eventStatus = eventData?.status || "ready";
+
+  // Check Event Active Status
+  if (eventStatus === "ready") {
+    import("@/app/logs/actions").then(({ recordLogAction }) => {
+      recordLogAction(
+        eventId,
+        "scan_status_blocked",
+        `행사 시작 전 부스 스캔 시도 차단 (행사 상태: 준비).`
+      ).catch(() => {});
+    });
+    return {
+      error: "행사가 시작되지 않았습니다.",
+      title: "행사 준비 중",
+    };
+  }
+
+  if (eventStatus === "end") {
+    import("@/app/logs/actions").then(({ recordLogAction }) => {
+      recordLogAction(
+        eventId,
+        "scan_status_blocked",
+        `종료된 행사 부스 스캔 시도 차단 (행사 상태: 종료).`
+      ).catch(() => {});
+    });
+    return {
+      error: "이미 종료된 행사입니다.",
+      title: "행사 종료",
+    };
+  }
 
   // 2. Parse input: Can be full URL, eventId:studentId, or manual student number
   let cleanCode = inputContent.trim();
@@ -194,7 +227,6 @@ export async function recordParticipationAction(
   }
 
   // 3. Check duplicate participation if policy is set to false (forbidden)
-  const eventData = booth.event as unknown as EventJoined | null;
   const allowDouble = eventData ? eventData.allow_double_participation : false;
 
   if (!allowDouble) {

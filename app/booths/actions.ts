@@ -248,6 +248,7 @@ export async function deleteBoothAction(id: string) {
 
 interface EventJoined {
   name: string;
+  status: "ready" | "progress" | "end" | string;
   allow_double_participation: boolean;
 }
 
@@ -258,7 +259,7 @@ export async function getBoothDetailAction(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("booths")
-    .select("*, event:events(name, allow_double_participation), operator:teachers(name)")
+    .select("*, event:events(name, status, allow_double_participation), operator:teachers(name)")
     .eq("id", id)
     .is("deleted_at", null)
     .single();
@@ -290,6 +291,7 @@ export async function getBoothDetailAction(id: string) {
       operator_id: data.operator_id,
       created_at: data.created_at,
       event_name: eventData ? eventData.name : "알 수 없는 행사",
+      event_status: eventData ? eventData.status : "ready",
       allow_double_participation: eventData ? eventData.allow_double_participation : false,
       operator_name: operator_name,
       participant_count: count || 0,

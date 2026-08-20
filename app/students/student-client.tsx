@@ -89,109 +89,42 @@ const getStudentStampbookUrl = (qrCode: string) => {
 };
 
 /**
- * Generates a high-quality QR code data URL.
- * If a valid school logo is provided, overlays the logo badge in the center using ErrorCorrectionLevel 'H'.
- * If no logo is provided, generates a clean standard QR code without logo.
+ * Generates a high-quality standard QR code data URL (100% recognition rate).
  */
 async function generateQrDataUrl(
   text: string,
-  logoUrl?: string,
   size: number = 600
 ): Promise<string> {
   try {
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-
-    const hasLogo = Boolean(logoUrl && logoUrl.trim().length > 10);
-
-    await QRCode.toCanvas(canvas, text, {
+    return await QRCode.toDataURL(text, {
       width: size,
       margin: 1,
-      errorCorrectionLevel: hasLogo ? "H" : "M",
+      errorCorrectionLevel: "M",
       color: {
         dark: "#000000",
         light: "#ffffff",
       },
     });
-
-    if (!hasLogo || !logoUrl) {
-      return canvas.toDataURL("image/png");
-    }
-
-    // Load logo image
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error("Logo load failed"));
-      img.src = logoUrl;
-    });
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return canvas.toDataURL("image/png");
-
-    const logoSize = Math.round(size * 0.22);
-    const center = size / 2;
-    const lx = center - logoSize / 2;
-    const ly = center - logoSize / 2;
-
-    const pad = Math.max(3, Math.round(logoSize * 0.1));
-    const badgeSize = logoSize + pad * 2;
-    const badgeX = center - badgeSize / 2;
-    const badgeY = center - badgeSize / 2;
-    const radius = Math.round(badgeSize * 0.2);
-
-    ctx.save();
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "#cbd5e1";
-    ctx.lineWidth = Math.max(2, Math.round(size * 0.006));
-
-    // Draw white background badge with rounded corners
-    ctx.beginPath();
-    if (ctx.roundRect) {
-      ctx.roundRect(badgeX, badgeY, badgeSize, badgeSize, radius);
-    } else {
-      ctx.rect(badgeX, badgeY, badgeSize, badgeSize);
-    }
-    ctx.fill();
-    ctx.stroke();
-
-    // Clip to rounded area for the logo image
-    ctx.beginPath();
-    if (ctx.roundRect) {
-      ctx.roundRect(lx, ly, logoSize, logoSize, Math.round(radius * 0.75));
-    } else {
-      ctx.rect(lx, ly, logoSize, logoSize);
-    }
-    ctx.clip();
-
-    ctx.drawImage(img, lx, ly, logoSize, logoSize);
-    ctx.restore();
-
-    return canvas.toDataURL("image/png");
   } catch (err) {
-    console.warn("QR logo generation fallback:", err);
-    return QRCode.toDataURL(text, { width: size, margin: 1 });
+    console.warn("QR generation fallback:", err);
+    return "";
   }
 }
 
 function StudentQrThumbnail({
   code,
-  logo,
   onClick,
 }: {
   code: string;
-  logo?: string;
   onClick: () => void;
 }) {
   const [dataUrl, setDataUrl] = useState<string>("");
 
   useEffect(() => {
-    generateQrDataUrl(getStudentStampbookUrl(code), logo, 120)
+    generateQrDataUrl(getStudentStampbookUrl(code), 120)
       .then((url) => setDataUrl(url))
       .catch(() => {});
-  }, [code, logo]);
+  }, [code]);
 
   return (
     <div
@@ -296,17 +229,17 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
     }
   }, [schoolLogo]);
 
-  // Generate QR Code for viewingQrStudent (encodes full Stampbook URL in HD with center school logo if available)
+  // Generate QR Code for viewingQrStudent (encodes full Stampbook URL in HD)
   useEffect(() => {
     if (viewingQrStudent) {
-      generateQrDataUrl(getStudentStampbookUrl(viewingQrStudent.qr_code), schoolLogo, 800)
+      generateQrDataUrl(getStudentStampbookUrl(viewingQrStudent.qr_code), 800)
         .then((url) => setStudentQrDataUrl(url))
         .catch(() => setStudentQrDataUrl(""));
     } else {
       setStudentQrDataUrl("");
       setCopiedLink(false);
     }
-  }, [viewingQrStudent, schoolLogo]);
+  }, [viewingQrStudent]);
 
   // Helper: Extract class label (e.g. "1학년 2반", "[외부] 용산초", "[외부] 유치원 다솜반") from student_number
   const getClassLabel = (studentNumber: string) => {
@@ -835,7 +768,7 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
               background: #f8fafc !important;
               background-color: #f8fafc !important;
               border-bottom: 1.5px solid #e2e8f0;
-              padding: 6px 8px;
+              padding: 5px 8px;
               text-align: center;
               font-size: 11px;
               font-weight: 700;
@@ -844,22 +777,21 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
               overflow: hidden;
               text-overflow: ellipsis;
             }
-            .student-info {
-              text-align: center;
-              padding-top: 6px;
-              padding-bottom: 2px;
+            .school-logo-container {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 14mm;
+              padding-top: 2mm;
+              margin-bottom: 1mm;
             }
-            .student-number {
-              font-size: 13px;
-              font-weight: 700;
-              color: #4f46e5;
-              margin-bottom: 2px;
+            .school-logo-img {
+              max-height: 12mm;
+              max-width: 45mm;
+              object-fit: contain;
             }
-            .student-name {
-              font-size: 23px;
-              font-weight: 900;
-              color: #0f172a;
-              letter-spacing: -0.5px;
+            .school-logo-spacer {
+              height: 4mm;
             }
             .qr-container {
               display: flex;
@@ -869,16 +801,34 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
               border: 1.5px solid #e2e8f0;
               border-radius: 8px;
               padding: 3px;
-              margin: 2px 0;
+              margin: 1mm 0 2mm 0;
             }
             .qr-container img {
-              width: 62mm;
-              height: 62mm;
+              width: 54mm;
+              height: 54mm;
               display: block;
+            }
+            .student-info {
+              text-align: center;
+              margin-top: 1mm;
+              margin-bottom: 2mm;
+            }
+            .student-number {
+              font-size: 12px;
+              font-weight: 700;
+              color: #4f46e5;
+              margin-bottom: 1px;
+            }
+            .student-name {
+              font-size: 22px;
+              font-weight: 900;
+              color: #0f172a;
+              letter-spacing: -0.5px;
+              line-height: 1.2;
             }
             .footer-guide {
               margin-top: auto;
-              padding-bottom: 6px;
+              padding-bottom: 5px;
               text-align: center;
             }
             .footer-tip {
@@ -915,12 +865,19 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
           <div class="cut-guide">
             <div class="card-inner">
               <div class="header-banner">${activeEventName}</div>
+              ${schoolLogo && schoolLogo.trim().length > 10 ? `
+                <div class="school-logo-container">
+                  <img src="${schoolLogo}" class="school-logo-img" alt="학교 로고" />
+                </div>
+              ` : `
+                <div class="school-logo-spacer"></div>
+              `}
+              <div class="qr-container">
+                <img src="${studentQrDataUrl}" />
+              </div>
               <div class="student-info">
                 <div class="student-number">${viewingQrStudent.student_number}</div>
                 <div class="student-name">${viewingQrStudent.name}</div>
-              </div>
-              <div class="qr-container">
-                <img src="${studentQrDataUrl}" />
               </div>
               <div class="footer-guide">
                 <p class="footer-tip">💡 부스 방문 시 위 QR코드를 보여주세요</p>
@@ -1182,7 +1139,7 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
           ctx.strokeRect(innerX, innerY, innerW, innerH);
 
           // 3. Top Banner (Event Header)
-          const headerHeight = 120;
+          const headerHeight = 110;
           ctx.fillStyle = "#f8fafc";
           ctx.fillRect(innerX + 3, innerY + 3, innerW - 6, headerHeight);
           ctx.strokeStyle = "#e2e8f0";
@@ -1196,24 +1153,29 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
           ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
           ctx.textAlign = "center";
           const trimmedEvent = activeEventName.length > 22 ? activeEventName.substring(0, 22) + "..." : activeEventName;
-          ctx.fillText(trimmedEvent, innerX + innerW / 2, innerY + 72);
+          ctx.fillText(trimmedEvent, innerX + innerW / 2, innerY + 68);
 
-          // 4. Student Number (e.g. 6학년 1반 23번)
-          ctx.fillStyle = "#4f46e5";
-          ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
-          ctx.textAlign = "center";
-          ctx.fillText(String(student.student_number || ""), innerX + innerW / 2, innerY + 185);
+          // 4. School Logo Area (Above QR Code)
+          let qrY = innerY + headerHeight + 35;
+          if (schoolLogoImg) {
+            const logoMaxW = 460;
+            const logoMaxH = 120;
+            const aspect = (schoolLogoImg.width || 1) / (schoolLogoImg.height || 1);
+            let lw = logoMaxW;
+            let lh = lw / aspect;
+            if (lh > logoMaxH) {
+              lh = logoMaxH;
+              lw = lh * aspect;
+            }
+            const lx = innerX + (innerW - lw) / 2;
+            const ly = innerY + headerHeight + 15 + (120 - lh) / 2;
+            ctx.drawImage(schoolLogoImg, lx, ly, lw, lh);
+            qrY = innerY + headerHeight + 155;
+          }
 
-          // 5. Student Name (Large Bold)
-          ctx.fillStyle = "#0f172a";
-          ctx.font = "bold 72px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
-          ctx.textAlign = "center";
-          ctx.fillText(String(student.name || ""), innerX + innerW / 2, innerY + 275);
-
-          // 6. Generate and draw Large QR Code (~65mm x 65mm = 770px)
-          const qrDisplaySize = 770;
+          // 5. Generate and draw Pure HD QR Code (~55mm x 55mm = 650px)
+          const qrDisplaySize = 650;
           const qrX = innerX + (innerW - qrDisplaySize) / 2;
-          const qrY = innerY + 335;
 
           qrCanvas.width = qrDisplaySize;
           qrCanvas.height = qrDisplaySize;
@@ -1221,70 +1183,39 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
           await QRCode.toCanvas(qrCanvas, getStudentStampbookUrl(student.qr_code), {
             width: qrDisplaySize,
             margin: 1,
-            errorCorrectionLevel: schoolLogoImg ? "H" : "M",
+            errorCorrectionLevel: "M",
           });
-
-          // If school logo image is available, draw center badge and logo on qrCanvas
-          if (schoolLogoImg) {
-            const qrCtx = qrCanvas.getContext("2d");
-            if (qrCtx) {
-              const logoSize = Math.round(qrDisplaySize * 0.22);
-              const center = qrDisplaySize / 2;
-              const lx = center - logoSize / 2;
-              const ly = center - logoSize / 2;
-
-              const pad = Math.max(4, Math.round(logoSize * 0.1));
-              const badgeSize = logoSize + pad * 2;
-              const badgeX = center - badgeSize / 2;
-              const badgeY = center - badgeSize / 2;
-              const radius = Math.round(badgeSize * 0.2);
-
-              qrCtx.save();
-              qrCtx.fillStyle = "#ffffff";
-              qrCtx.strokeStyle = "#cbd5e1";
-              qrCtx.lineWidth = 4;
-
-              // Draw badge background
-              qrCtx.beginPath();
-              if (qrCtx.roundRect) {
-                qrCtx.roundRect(badgeX, badgeY, badgeSize, badgeSize, radius);
-              } else {
-                qrCtx.rect(badgeX, badgeY, badgeSize, badgeSize);
-              }
-              qrCtx.fill();
-              qrCtx.stroke();
-
-              // Clip to badge for logo image
-              qrCtx.beginPath();
-              if (qrCtx.roundRect) {
-                qrCtx.roundRect(lx, ly, logoSize, logoSize, Math.round(radius * 0.75));
-              } else {
-                qrCtx.rect(lx, ly, logoSize, logoSize);
-              }
-              qrCtx.clip();
-
-              qrCtx.drawImage(schoolLogoImg, lx, ly, logoSize, logoSize);
-              qrCtx.restore();
-            }
-          }
 
           // QR Code container box
           ctx.fillStyle = "#ffffff";
-          ctx.fillRect(qrX - 10, qrY - 10, qrDisplaySize + 20, qrDisplaySize + 20);
+          ctx.fillRect(qrX - 8, qrY - 8, qrDisplaySize + 16, qrDisplaySize + 16);
           ctx.strokeStyle = "#e2e8f0";
           ctx.lineWidth = 3;
-          ctx.strokeRect(qrX - 10, qrY - 10, qrDisplaySize + 20, qrDisplaySize + 20);
+          ctx.strokeRect(qrX - 8, qrY - 8, qrDisplaySize + 16, qrDisplaySize + 16);
 
           ctx.drawImage(qrCanvas, qrX, qrY, qrDisplaySize, qrDisplaySize);
 
+          // 6. Student Info (Below QR Code)
+          const studentNumY = qrY + qrDisplaySize + 55;
+          ctx.fillStyle = "#4f46e5";
+          ctx.font = "bold 36px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(String(student.student_number || ""), innerX + innerW / 2, studentNumY);
+
+          const studentNameY = studentNumY + 68;
+          ctx.fillStyle = "#0f172a";
+          ctx.font = "bold 70px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(String(student.name || ""), innerX + innerW / 2, studentNameY);
+
           // 7. Footer Guide text
           ctx.fillStyle = "#64748b";
-          ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
           ctx.textAlign = "center";
           ctx.fillText("💡 부스 방문 시 위 QR코드를 보여주세요", innerX + innerW / 2, innerY + innerH - 65);
 
           ctx.fillStyle = "#94a3b8";
-          ctx.font = "22px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.font = "20px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
           ctx.fillText("EduFair 스마트 스탬프투어", innerX + innerW / 2, innerY + innerH - 25);
         }
 
@@ -1488,7 +1419,6 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
                       <TableCell>
                         <StudentQrThumbnail
                           code={student.qr_code}
-                          logo={schoolLogo}
                           onClick={() => setViewingQrStudent(student)}
                         />
                       </TableCell>
@@ -1700,25 +1630,36 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
                   <div className="bg-slate-100 border-b border-slate-200 py-1.5 px-3 text-[11px] font-bold text-slate-600 truncate">
                     {initialEvents.find((e) => e.id === selectedEventId)?.name || "EduFair 행사"}
                   </div>
-                  <div className="pt-2.5 pb-1 space-y-0.5">
-                    <p className="text-xs font-bold text-indigo-600 font-mono">{viewingQrStudent.student_number}</p>
-                    <h3 className="text-xl font-black text-slate-900 tracking-tight">{viewingQrStudent.name}</h3>
-                  </div>
+
+                  {/* School Logo above QR */}
+                  {schoolLogo && schoolLogo.trim().length > 10 ? (
+                    <div className="pt-2 px-3 flex items-center justify-center">
+                      <img src={schoolLogo} alt="학교 로고" className="max-h-7 max-w-[140px] object-contain" />
+                    </div>
+                  ) : (
+                    <div className="pt-1" />
+                  )}
                   
                   {/* QR Display area */}
-                  <div className="px-3 py-1 flex items-center justify-center">
+                  <div className="px-3 py-1.5 flex items-center justify-center">
                     <div className="p-1.5 bg-white rounded-xl border border-slate-200 shadow-xs inline-block">
                       {studentQrDataUrl ? (
-                        <img src={studentQrDataUrl} alt={`${viewingQrStudent.name} QR`} className="w-40 h-40 object-contain" />
+                        <img src={studentQrDataUrl} alt={`${viewingQrStudent.name} QR`} className="w-36 h-36 object-contain" />
                       ) : (
-                        <div className="w-40 h-40 flex items-center justify-center bg-slate-50">
+                        <div className="w-36 h-36 flex items-center justify-center bg-slate-50">
                           <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <div className="py-2 px-1 text-[9px] text-slate-500 space-y-0.5 mt-auto">
+                  {/* Student Info below QR */}
+                  <div className="pt-1 pb-2 space-y-0.5">
+                    <p className="text-xs font-bold text-indigo-600 font-mono">{viewingQrStudent.student_number}</p>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight">{viewingQrStudent.name}</h3>
+                  </div>
+
+                  <div className="py-2 px-1 text-[9px] text-slate-500 space-y-0.5 mt-auto border-t border-slate-100">
                     <p className="font-bold text-slate-600">💡 부스 방문 시 위 QR코드를 보여주세요</p>
                     <p className="text-slate-400">EduFair 스마트 스탬프투어</p>
                   </div>

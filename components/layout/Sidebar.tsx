@@ -56,19 +56,26 @@ export function Sidebar({ onClose }: SidebarProps) {
           name = cleanSchoolName(user.user_metadata.school_name);
         }
 
+        const isLegacyAdmin = user?.id === "1b6e4ab3-e40b-4ad2-80bc-063271019707" || user?.email === "admin@school.kr";
+
         const { data } = await supabase
           .from("settings")
           .select("key, value");
 
         let validLogo = "";
-        if (data) {
-          const nameRow = data.find((r) => r.key === "school_name");
-          const logoRow = data.find((r) => r.key === "school_logo");
+        if (data && user) {
+          const userLogoRow = data.find((r) => r.key === `school_logo_${user.id}`);
+          const globalLogoRow = isLegacyAdmin ? data.find((r) => r.key === "school_logo") : null;
+          const targetLogoRow = userLogoRow || globalLogoRow;
+
+          const userNameRow = data.find((r) => r.key === `school_name_${user.id}`);
+          const globalNameRow = isLegacyAdmin ? data.find((r) => r.key === "school_name") : null;
+          
           if (!name) {
-            name = cleanSchoolName(nameRow?.value || "EduFair Admin");
+            name = cleanSchoolName(userNameRow?.value || globalNameRow?.value || "EduFair Admin");
           }
           
-          let rawLogo = logoRow?.value;
+          let rawLogo = targetLogoRow?.value;
           if (typeof rawLogo === "string") {
             try {
               if ((rawLogo.startsWith('"') && rawLogo.endsWith('"')) || rawLogo.startsWith('{') || rawLogo.startsWith('[')) {

@@ -27,16 +27,23 @@ export async function getSettingsAction(): Promise<SystemSettings> {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return defaultSettings;
+
+    const isLegacyAdmin = user.id === "1b6e4ab3-e40b-4ad2-80bc-063271019707" || user.email === "admin@school.kr";
 
     const { data, error } = await supabase.from("settings").select("key, value");
     if (error) throw new Error(error.message);
 
     const settings = { ...defaultSettings };
     if (data) {
-      data.forEach((row) => {
-        const k = row.key as keyof SystemSettings;
-        if (k in settings) {
-          let val = row.value;
+      const settingKeys = Object.keys(defaultSettings) as (keyof SystemSettings)[];
+      settingKeys.forEach((k) => {
+        const userSpecificRow = data.find((r) => r.key === `${k}_${user.id}`);
+        const globalRow = isLegacyAdmin ? data.find((r) => r.key === k) : null;
+        const targetRow = userSpecificRow || globalRow;
+
+        if (targetRow) {
+          let val = targetRow.value;
           if (typeof val === "string") {
             try {
               if ((val.startsWith('"') && val.endsWith('"')) || val.startsWith('{') || val.startsWith('[')) {
@@ -79,34 +86,35 @@ export async function saveSettingsAction(settings: Partial<SystemSettings>) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "로그인이 필요합니다." };
 
     if (settings.school_name !== undefined) {
       settings.school_name = cleanSchoolName(settings.school_name);
       
-      // Update user_metadata if user is logged in
-      if (user) {
-        try {
-          await supabase.auth.updateUser({
-            data: { school_name: settings.school_name },
-          });
-        } catch {
-          // ignore
-        }
+      // Update user_metadata if user is logged in (ONLY school_name, NEVER logo!)
+      try {
+        await supabase.auth.updateUser({
+          data: { school_name: settings.school_name },
+        });
+      } catch {
+        // ignore
       }
     }
 
-    // Prepare upsert payload
+    // Save each setting per-user using `${key}_${user.id}`
     const entries = Object.entries(settings);
     for (const [key, rawValue] of entries) {
       const cleanValue = typeof rawValue === "string" ? rawValue.trim().replace(/^["'\\]+|["'\\]+$/g, "") : String(rawValue || "");
+      const userKey = `${key}_${user.id}`;
+      
       const { error } = await supabase
         .from("settings")
-        .upsert({ key, value: cleanValue }, { onConflict: "key" });
+        .upsert({ key: userKey, value: cleanValue }, { onConflict: "key" });
       if (error) {
         // Fallback for jsonb typed column
         await supabase
           .from("settings")
-          .upsert({ key, value: JSON.stringify(cleanValue) }, { onConflict: "key" });
+          .upsert({ key: userKey, value: JSON.stringify(cleanValue) }, { onConflict: "key" });
       }
     }
 

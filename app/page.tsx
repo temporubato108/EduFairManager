@@ -13,7 +13,7 @@ export default async function HomePage() {
   const serializedEvents = activeEvents.map((event) => ({
     id: event.id,
     name: event.name,
-    date: event.date ? new Date(event.date).toISOString().split("T")[0] : "",
+    date: event.date || "",
   }));
 
   return <DashboardClientPage initialEvents={serializedEvents} />;

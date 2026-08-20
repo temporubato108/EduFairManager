@@ -63,6 +63,8 @@ interface Event {
   name: string;
   description: string | null;
   date: string;
+  start_date?: string;
+  end_date?: string;
   status: "ready" | "progress" | "end";
   allow_double_participation: boolean;
   is_template: boolean;
@@ -70,6 +72,28 @@ interface Event {
 
 interface EventClientPageProps {
   initialEvents: Event[];
+}
+
+function calculateDays(start: string, end: string): number {
+  if (!start) return 1;
+  if (!end || end === start) return 1;
+  const s = new Date(start).getTime();
+  const e = new Date(end).getTime();
+  const diffTime = e - s;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  return diffDays > 0 ? diffDays : 1;
+}
+
+function parseDates(dateStr: string, start?: string, end?: string) {
+  if (start && end) {
+    return { startDate: start, endDate: end };
+  }
+  if (dateStr && dateStr.includes(" ~ ")) {
+    const parts = dateStr.split(" ~ ");
+    return { startDate: parts[0].trim(), endDate: parts[1].trim() };
+  }
+  const single = dateStr ? dateStr.trim() : new Date().toISOString().split("T")[0];
+  return { startDate: single, endDate: single };
 }
 
 export function EventClientPage({ initialEvents }: EventClientPageProps) {
@@ -92,23 +116,27 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
   // Form states for Create/Edit
   const [formName, setFormName] = useState("");
   const [formDesc, setFormDesc] = useState("");
-  const [formDate, setFormDate] = useState("");
+  const [formStartDate, setFormStartDate] = useState("");
+  const [formEndDate, setFormEndDate] = useState("");
   const [formStatus, setFormStatus] = useState<"ready" | "progress" | "end">("ready");
   const [formDouble, setFormDouble] = useState("false");
   const [formIsTemplate, setFormIsTemplate] = useState(false);
 
   // Form states for Duplicate
   const [dupName, setDupName] = useState("");
-  const [dupDate, setDupDate] = useState("");
+  const [dupStartDate, setDupStartDate] = useState("");
+  const [dupEndDate, setDupEndDate] = useState("");
 
   // Form states for Template
   const [tplName, setTplName] = useState("");
 
   // Reset Create Form
   const resetCreateForm = () => {
+    const today = new Date().toISOString().split("T")[0];
     setFormName("");
     setFormDesc("");
-    setFormDate(new Date().toISOString().split("T")[0]);
+    setFormStartDate(today);
+    setFormEndDate(today);
     setFormStatus("ready");
     setFormDouble("false");
     setFormIsTemplate(false);
@@ -117,10 +145,12 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
 
   // Open Edit Dialog
   const openEdit = (event: Event) => {
+    const { startDate, endDate } = parseDates(event.date, event.start_date, event.end_date);
     setEditingEvent(event);
     setFormName(event.name);
     setFormDesc(event.description || "");
-    setFormDate(event.date);
+    setFormStartDate(startDate);
+    setFormEndDate(endDate);
     setFormStatus(event.status);
     setFormDouble(event.allow_double_participation ? "true" : "false");
     setFormIsTemplate(event.is_template);
@@ -129,9 +159,11 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
 
   // Open Duplicate Dialog
   const openDuplicate = (event: Event) => {
+    const { startDate, endDate } = parseDates(event.date, event.start_date, event.end_date);
     setDuplicatingEvent(event);
     setDupName(`${event.name} (복제)`);
-    setDupDate(new Date().toISOString().split("T")[0]);
+    setDupStartDate(startDate);
+    setDupEndDate(endDate);
     setErrorMessage(null);
   };
 
@@ -145,13 +177,14 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
   // Handle Create Submit
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName || !formDate) return;
+    if (!formName || !formStartDate) return;
 
     startTransition(async () => {
       const res = await createEventAction({
         name: formName,
         description: formDesc || undefined,
-        date: formDate,
+        date: formStartDate,
+        end_date: formEndDate && formEndDate !== formStartDate ? formEndDate : undefined,
         status: formStatus,
         allow_double_participation: formDouble === "true",
         is_template: formIsTemplate,
@@ -169,13 +202,14 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
   // Handle Edit Submit
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingEvent || !formName || !formDate) return;
+    if (!editingEvent || !formName || !formStartDate) return;
 
     startTransition(async () => {
       const res = await updateEventAction(editingEvent.id, {
         name: formName,
         description: formDesc || undefined,
-        date: formDate,
+        date: formStartDate,
+        end_date: formEndDate && formEndDate !== formStartDate ? formEndDate : undefined,
         status: formStatus,
         allow_double_participation: formDouble === "true",
         is_template: formIsTemplate,
@@ -192,10 +226,15 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
   // Handle Duplicate Submit
   const handleDuplicateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!duplicatingEvent || !dupName || !dupDate) return;
+    if (!duplicatingEvent || !dupName || !dupStartDate) return;
 
     startTransition(async () => {
-      const res = await duplicateEventAction(duplicatingEvent.id, dupName, dupDate);
+      const res = await duplicateEventAction(
+        duplicatingEvent.id,
+        dupName,
+        dupStartDate,
+        dupEndDate && dupEndDate !== dupStartDate ? dupEndDate : undefined
+      );
       if (res.error) {
         setErrorMessage(res.error);
       } else {
@@ -433,36 +472,66 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="c-date" className="text-slate-600 dark:text-[#98989D]">날짜</Label>
-                  <Input
-                    id="c-date"
-                    type="date"
-                    value={formDate}
-                    onChange={(e) => setFormDate(e.target.value)}
-                    required
-                    disabled={isPending}
-                    className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] font-mono"
-                  />
+              {/* Date Range Section */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-slate-600 dark:text-[#98989D]">행사 기간</Label>
+                  {formStartDate && formEndDate && formStartDate !== formEndDate && (
+                    <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-800/40">
+                      {calculateDays(formStartDate, formEndDate)}일간 진행
+                    </span>
+                  )}
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="c-status" className="text-slate-600 dark:text-[#98989D]">초기 상태</Label>
-                  <Select
-                    value={formStatus}
-                    onValueChange={(val) => val && setFormStatus(val as "ready" | "progress" | "end")}
-                    disabled={isPending}
-                  >
-                    <SelectTrigger id="c-status" className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-[#1E1E1E] border-slate-200 dark:border-[#2C2C2E] dark:text-white">
-                      <SelectItem value="ready">준비</SelectItem>
-                      <SelectItem value="progress">진행 중</SelectItem>
-                      <SelectItem value="end">종료</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-3 items-center">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400">시작일</span>
+                    <Input
+                      id="c-start-date"
+                      type="date"
+                      value={formStartDate}
+                      onChange={(e) => {
+                        setFormStartDate(e.target.value);
+                        if (!formEndDate || formEndDate < e.target.value) {
+                          setFormEndDate(e.target.value);
+                        }
+                      }}
+                      required
+                      disabled={isPending}
+                      className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] font-mono text-xs sm:text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400">종료일</span>
+                    <Input
+                      id="c-end-date"
+                      type="date"
+                      min={formStartDate}
+                      value={formEndDate}
+                      onChange={(e) => setFormEndDate(e.target.value)}
+                      required
+                      disabled={isPending}
+                      className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] font-mono text-xs sm:text-sm"
+                    />
+                  </div>
                 </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="c-status" className="text-slate-600 dark:text-[#98989D]">초기 상태</Label>
+                <Select
+                  value={formStatus}
+                  onValueChange={(val) => val && setFormStatus(val as "ready" | "progress" | "end")}
+                  disabled={isPending}
+                >
+                  <SelectTrigger id="c-status" className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-[#1E1E1E] border-slate-200 dark:border-[#2C2C2E] dark:text-white">
+                    <SelectItem value="ready">준비</SelectItem>
+                    <SelectItem value="progress">진행 중</SelectItem>
+                    <SelectItem value="end">종료</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
@@ -563,36 +632,66 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="e-date" className="text-slate-600 dark:text-[#98989D]">날짜</Label>
-                  <Input
-                    id="e-date"
-                    type="date"
-                    value={formDate}
-                    onChange={(e) => setFormDate(e.target.value)}
-                    required
-                    disabled={isPending}
-                    className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] font-mono"
-                  />
+              {/* Date Range Section */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-slate-600 dark:text-[#98989D]">행사 기간</Label>
+                  {formStartDate && formEndDate && formStartDate !== formEndDate && (
+                    <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-800/40">
+                      {calculateDays(formStartDate, formEndDate)}일간 진행
+                    </span>
+                  )}
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="e-status" className="text-slate-600 dark:text-[#98989D]">행사 상태</Label>
-                  <Select
-                    value={formStatus}
-                    onValueChange={(val) => val && setFormStatus(val as "ready" | "progress" | "end")}
-                    disabled={isPending}
-                  >
-                    <SelectTrigger id="e-status" className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-[#1E1E1E] border-slate-200 dark:border-[#2C2C2E] dark:text-white">
-                      <SelectItem value="ready">준비</SelectItem>
-                      <SelectItem value="progress">진행 중</SelectItem>
-                      <SelectItem value="end">종료</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-3 items-center">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400">시작일</span>
+                    <Input
+                      id="e-start-date"
+                      type="date"
+                      value={formStartDate}
+                      onChange={(e) => {
+                        setFormStartDate(e.target.value);
+                        if (!formEndDate || formEndDate < e.target.value) {
+                          setFormEndDate(e.target.value);
+                        }
+                      }}
+                      required
+                      disabled={isPending}
+                      className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] font-mono text-xs sm:text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400">종료일</span>
+                    <Input
+                      id="e-end-date"
+                      type="date"
+                      min={formStartDate}
+                      value={formEndDate}
+                      onChange={(e) => setFormEndDate(e.target.value)}
+                      required
+                      disabled={isPending}
+                      className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] font-mono text-xs sm:text-sm"
+                    />
+                  </div>
                 </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="e-status" className="text-slate-600 dark:text-[#98989D]">행사 상태</Label>
+                <Select
+                  value={formStatus}
+                  onValueChange={(val) => val && setFormStatus(val as "ready" | "progress" | "end")}
+                  disabled={isPending}
+                >
+                  <SelectTrigger id="e-status" className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-[#1E1E1E] border-slate-200 dark:border-[#2C2C2E] dark:text-white">
+                    <SelectItem value="ready">준비</SelectItem>
+                    <SelectItem value="progress">진행 중</SelectItem>
+                    <SelectItem value="end">종료</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
@@ -682,17 +781,48 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
                 />
               </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="d-date" className="text-slate-600 dark:text-[#98989D]">개최 날짜</Label>
-                <Input
-                  id="d-date"
-                  type="date"
-                  value={dupDate}
-                  onChange={(e) => setDupDate(e.target.value)}
-                  required
-                  disabled={isPending}
-                  className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] font-mono"
-                />
+              {/* Date Range Section */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-slate-600 dark:text-[#98989D]">개최 기간</Label>
+                  {dupStartDate && dupEndDate && dupStartDate !== dupEndDate && (
+                    <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-800/40">
+                      {calculateDays(dupStartDate, dupEndDate)}일간 진행
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3 items-center">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400">시작일</span>
+                    <Input
+                      id="d-start-date"
+                      type="date"
+                      value={dupStartDate}
+                      onChange={(e) => {
+                        setDupStartDate(e.target.value);
+                        if (!dupEndDate || dupEndDate < e.target.value) {
+                          setDupEndDate(e.target.value);
+                        }
+                      }}
+                      required
+                      disabled={isPending}
+                      className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] font-mono text-xs sm:text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400">종료일</span>
+                    <Input
+                      id="d-end-date"
+                      type="date"
+                      min={dupStartDate}
+                      value={dupEndDate}
+                      onChange={(e) => setDupEndDate(e.target.value)}
+                      required
+                      disabled={isPending}
+                      className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] font-mono text-xs sm:text-sm"
+                    />
+                  </div>
+                </div>
               </div>
 
               <DialogFooter className="pt-4">

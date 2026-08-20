@@ -8,6 +8,7 @@ export interface EventData {
   name: string;
   description?: string;
   date: string;
+  end_date?: string;
   status: "ready" | "progress" | "end";
   allow_double_participation: boolean;
   is_template: boolean;
@@ -44,9 +45,12 @@ export async function getEventsAction() {
       return isLegacyAdmin;
     })
     .map((e) => {
-      const { description } = parseEventDetails(e);
+      const { description, startDate, endDate, formattedDate } = parseEventDetails(e);
       return {
         ...e,
+        date: formattedDate || startDate,
+        start_date: startDate,
+        end_date: endDate || startDate,
         description,
       };
     });
@@ -55,15 +59,26 @@ export async function getEventsAction() {
 }
 
 /**
- * Create a new event tagged with the creator's user_id
+ * Create a new event tagged with the creator's user_id and optional date range
  */
 export async function createEventAction(data: EventData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  const startDate = data.date ? data.date.split(" ~ ")[0].trim() : new Date().toISOString().split("T")[0];
+  const endDate = data.end_date || (data.date?.includes(" ~ ") ? data.date.split(" ~ ")[1].trim() : null);
+
   const payload = {
-    ...data,
-    description: encodeEventDescription(data.description, user?.id || null),
+    name: data.name,
+    description: encodeEventDescription(
+      data.description,
+      user?.id || null,
+      endDate && endDate !== startDate ? endDate : null
+    ),
+    date: startDate,
+    status: data.status,
+    allow_double_participation: data.allow_double_participation,
+    is_template: data.is_template,
   };
 
   const { data: newEvent, error } = await supabase
@@ -80,8 +95,17 @@ export async function createEventAction(data: EventData) {
   await recordLogAction(newEvent.id, "create_event", `행사 생성 완료: 이름='${newEvent.name}', 날짜='${newEvent.date}'`);
 
   revalidatePath("/events");
-  const { description } = parseEventDetails(newEvent);
-  return { success: true, data: { ...newEvent, description } };
+  const { description, startDate: sDate, endDate: eDate, formattedDate } = parseEventDetails(newEvent);
+  return {
+    success: true,
+    data: {
+      ...newEvent,
+      date: formattedDate || sDate,
+      start_date: sDate,
+      end_date: eDate || sDate,
+      description,
+    },
+  };
 }
 
 /**
@@ -91,9 +115,25 @@ export async function updateEventAction(id: string, data: Partial<EventData>) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const updatePayload: Record<string, unknown> = { ...data };
-  if (data.description !== undefined) {
-    updatePayload.description = encodeEventDescription(data.description, user?.id || null);
+  const updatePayload: Record<string, unknown> = {};
+  if (data.name !== undefined) updatePayload.name = data.name;
+  if (data.status !== undefined) updatePayload.status = data.status;
+  if (data.allow_double_participation !== undefined) updatePayload.allow_double_participation = data.allow_double_participation;
+  if (data.is_template !== undefined) updatePayload.is_template = data.is_template;
+
+  let startDate: string | undefined = undefined;
+  if (data.date !== undefined) {
+    startDate = data.date.split(" ~ ")[0].trim();
+    updatePayload.date = startDate;
+  }
+
+  if (data.description !== undefined || data.end_date !== undefined || data.date !== undefined) {
+    const endDate = data.end_date !== undefined ? data.end_date : (data.date?.includes(" ~ ") ? data.date.split(" ~ ")[1].trim() : null);
+    updatePayload.description = encodeEventDescription(
+      data.description,
+      user?.id || null,
+      endDate && endDate !== startDate ? endDate : null
+    );
   }
 
   const { data: updatedEvent, error } = await supabase
@@ -111,8 +151,17 @@ export async function updateEventAction(id: string, data: Partial<EventData>) {
   await recordLogAction(id, "update_event", `행사 정보 수정 완료: 이름='${updatedEvent.name}', 상태='${updatedEvent.status}'`);
 
   revalidatePath("/events");
-  const { description } = parseEventDetails(updatedEvent);
-  return { success: true, data: { ...updatedEvent, description } };
+  const { description, startDate: sDate, endDate: eDate, formattedDate } = parseEventDetails(updatedEvent);
+  return {
+    success: true,
+    data: {
+      ...updatedEvent,
+      date: formattedDate || sDate,
+      start_date: sDate,
+      end_date: eDate || sDate,
+      description,
+    },
+  };
 }
 
 /**
@@ -139,7 +188,12 @@ export async function deleteEventAction(id: string) {
 /**
  * Duplicate an event and all its associated booths
  */
-export async function duplicateEventAction(id: string, newName: string, newDate: string) {
+export async function duplicateEventAction(
+  id: string,
+  newName: string,
+  newDate: string,
+  newEndDate?: string
+) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -156,11 +210,18 @@ export async function duplicateEventAction(id: string, newName: string, newDate:
 
   const { description: sourceCleanDesc } = parseEventDetails(sourceEvent);
 
+  const startDate = newDate ? newDate.split(" ~ ")[0].trim() : new Date().toISOString().split("T")[0];
+  const endDate = newEndDate || (newDate?.includes(" ~ ") ? newDate.split(" ~ ")[1].trim() : null);
+
   // 2. Create the duplicated event (set default status to 'ready')
   const newEventData = {
     name: newName,
-    description: encodeEventDescription(sourceCleanDesc, user?.id || null),
-    date: newDate,
+    description: encodeEventDescription(
+      sourceCleanDesc,
+      user?.id || null,
+      endDate && endDate !== startDate ? endDate : null
+    ),
+    date: startDate,
     status: "ready" as const,
     allow_double_participation: sourceEvent.allow_double_participation,
     is_template: false,
@@ -209,8 +270,17 @@ export async function duplicateEventAction(id: string, newName: string, newDate:
   await recordLogAction(newEvent.id, "duplicate_event", `행사 복제 완료: 원본='${id}' -> 신규='${newEvent.name}'`);
 
   revalidatePath("/events");
-  const { description } = parseEventDetails(newEvent);
-  return { success: true, data: { ...newEvent, description } };
+  const { description, startDate: sDate, endDate: eDate, formattedDate } = parseEventDetails(newEvent);
+  return {
+    success: true,
+    data: {
+      ...newEvent,
+      date: formattedDate || sDate,
+      start_date: sDate,
+      end_date: eDate || sDate,
+      description,
+    },
+  };
 }
 
 /**

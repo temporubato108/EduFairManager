@@ -17,7 +17,7 @@ export default async function BoothsPage() {
   const serializedEvents = activeEvents.map((event) => ({
     id: event.id,
     name: event.name,
-    date: event.date ? new Date(event.date).toISOString().split("T")[0] : "",
+    date: event.date || "",
   }));
 
   const serializedTeachers = teachers.map((t) => ({

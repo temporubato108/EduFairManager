@@ -87,33 +87,72 @@ export function encodeBoothDescription(
   return cleanDesc || null;
 }
 
-export function parseEventDetails(event: { description?: string | null }): {
+export function parseEventDetails(event: {
+  date?: string | null;
+  description?: string | null;
+}): {
   owner_id: string | null;
   description: string | null;
+  startDate: string;
+  endDate: string | null;
+  formattedDate: string;
 } {
   let description = event.description || null;
   let owner_id: string | null = null;
+  let endDate: string | null = null;
 
-  if (description && description.includes("<!--owner:")) {
-    const match = description.match(/<!--owner:(.*?)-->/);
-    if (match && match[1]) {
-      owner_id = match[1].trim();
-      description = description.replace(/<!--owner:.*?-->\s*/g, "").trim() || null;
+  if (description) {
+    if (description.includes("<!--owner:")) {
+      const match = description.match(/<!--owner:(.*?)-->/);
+      if (match && match[1]) {
+        owner_id = match[1].trim();
+        description = description.replace(/<!--owner:.*?-->\s*/g, "").trim() || null;
+      }
+    }
+
+    if (description && description.includes("<!--end_date:")) {
+      const match = description.match(/<!--end_date:(.*?)-->/);
+      if (match && match[1]) {
+        endDate = match[1].trim();
+        description = description.replace(/<!--end_date:.*?-->\s*/g, "").trim() || null;
+      }
     }
   }
 
-  return { owner_id, description };
+  const rawDate = event.date ? String(event.date).split("T")[0] : "";
+  const startDate = rawDate;
+
+  let formattedDate = startDate;
+  if (endDate && endDate !== startDate) {
+    formattedDate = `${startDate} ~ ${endDate}`;
+  }
+
+  return { owner_id, description, startDate, endDate, formattedDate };
 }
 
 export function encodeEventDescription(
   description?: string | null,
-  ownerId?: string | null
+  ownerId?: string | null,
+  endDate?: string | null
 ): string | null {
-  const cleanDesc = (description || "").replace(/<!--owner:.*?-->\s*/g, "").trim();
-  const cleanOwner = (ownerId || "").trim();
+  const cleanDesc = (description || "")
+    .replace(/<!--owner:.*?-->\s*/g, "")
+    .replace(/<!--end_date:.*?-->\s*/g, "")
+    .trim();
 
+  const cleanOwner = (ownerId || "").trim();
+  const cleanEnd = (endDate || "").trim();
+
+  let tags = "";
   if (cleanOwner) {
-    return `<!--owner:${cleanOwner}-->${cleanDesc}`;
+    tags += `<!--owner:${cleanOwner}-->`;
+  }
+  if (cleanEnd) {
+    tags += `<!--end_date:${cleanEnd}-->`;
+  }
+
+  if (tags) {
+    return `${tags}${cleanDesc}`;
   }
   return cleanDesc || null;
 }

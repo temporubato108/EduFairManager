@@ -9,7 +9,9 @@ export default async function EventsPage() {
   // Format dates to ISO strings before passing to client components if necessary
   const serializedEvents = events.map((event) => ({
     ...event,
-    date: event.date ? new Date(event.date).toISOString().split("T")[0] : "",
+    date: event.date || "",
+    start_date: event.start_date || "",
+    end_date: event.end_date || "",
     created_at: event.created_at ? new Date(event.created_at).toISOString() : "",
     updated_at: event.updated_at ? new Date(event.updated_at).toISOString() : "",
     deleted_at: event.deleted_at ? new Date(event.deleted_at).toISOString() : null,

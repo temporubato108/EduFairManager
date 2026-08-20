@@ -13,7 +13,7 @@ export default async function LogsPage() {
   const serializedEvents = activeEvents.map((event) => ({
     id: event.id,
     name: event.name,
-    date: event.date ? new Date(event.date).toISOString().split("T")[0] : "",
+    date: event.date || "",
   }));
 
   return <LogsClientPage initialEvents={serializedEvents} />;

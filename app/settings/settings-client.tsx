@@ -23,9 +23,11 @@ import {
   Moon,
   School,
   QrCode,
+  Lock,
 } from "lucide-react";
-import { saveSettingsAction, SystemSettings } from "./actions";
+import { saveSettingsAction, changePasswordAction, SystemSettings } from "./actions";
 import { isValidSchoolLogo, cleanSchoolName } from "@/lib/utils";
+import { setCachedSettings } from "@/lib/cache";
 
 interface SettingsClientPageProps {
   initialSettings: SystemSettings;
@@ -46,32 +48,66 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Password change states
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // File Upload handler with base64 serialization
+  // File Upload handler with client-side canvas optimization (supports any size/format)
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Verify it is an image
     if (!file.type.startsWith("image/")) {
-      setErrorMessage("로고 파일은 이미지 양식(PNG, JPG)이어야 합니다.");
-      return;
-    }
-
-    // Limit logo size to 500KB to prevent bloated database payload
-    if (file.size > 500 * 1024) {
-      setErrorMessage("이미지 용량이 너무 큽니다 (500KB 이하의 로고 이미지만 사용 가능).");
+      setErrorMessage("로고 파일은 이미지 양식(PNG, JPG, WebP, GIF 등)이어야 합니다.");
       return;
     }
 
     setErrorMessage(null);
     setImgError(false);
+
     const reader = new FileReader();
     reader.onload = (event) => {
-      if (event.target?.result && typeof event.target.result === "string") {
-        setSchoolLogo(event.target.result);
-      }
+      const rawDataUrl = event.target?.result;
+      if (!rawDataUrl || typeof rawDataUrl !== "string") return;
+
+      // Automatically downscale and optimize image using canvas (max 256x256)
+      const img = new window.Image();
+      img.onload = () => {
+        const MAX_DIM = 256;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL("image/png");
+          setSchoolLogo(compressed);
+        } else {
+          setSchoolLogo(rawDataUrl);
+        }
+      };
+      img.onerror = () => {
+        setErrorMessage("이미지 로드에 실패했습니다. 다른 이미지 파일을 선택해주세요.");
+      };
+      img.src = rawDataUrl;
     };
     reader.readAsDataURL(file);
   };
@@ -103,6 +139,11 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
         setErrorMessage(res.error);
       } else {
         setSuccessMessage("시스템 설정이 성공적으로 업데이트되었습니다.");
+        if (typeof window !== "undefined") {
+          localStorage.setItem("edufair_school_name", schoolName);
+          localStorage.setItem("edufair_school_logo", schoolLogo);
+        }
+        setCachedSettings({ schoolName, schoolLogo });
         // Auto scroll to top to see success alert
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
@@ -111,6 +152,45 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
       setErrorMessage(`저장 실패: ${errorObj.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordLoading(true);
+    setPasswordSuccess(null);
+    setPasswordError(null);
+
+    if (newPassword.length < 6) {
+      setPasswordError("새 비밀번호는 최소 6자 이상이어야 합니다.");
+      setPasswordLoading(false);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("새 비밀번호와 비밀번호 확인이 일치하지 않습니다.");
+      setPasswordLoading(false);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("new_password", newPassword);
+    formData.append("confirm_password", confirmPassword);
+
+    try {
+      const res = await changePasswordAction(formData);
+      if (res.error) {
+        setPasswordError(res.error);
+      } else {
+        setPasswordSuccess("비밀번호가 성공적으로 변경되었습니다.");
+        setNewPassword("");
+        setConfirmPassword("");
+      }
+    } catch (err) {
+      const errorObj = err as Error;
+      setPasswordError(`비밀번호 변경 실패: ${errorObj.message}`);
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -349,6 +429,87 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
           </div>
 
         </form>
+
+        {/* Section 4: Change Password Card */}
+        <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
+          <CardHeader className="border-b border-slate-100 dark:border-[#2C2C2E]/60 pb-4">
+            <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-white">
+              <Lock className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              비밀번호 변경
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500 dark:text-[#98989D]">
+              현재 로그인된 관리자 계정의 비밀번호를 안전하게 변경합니다.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-5">
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              {passwordSuccess && (
+                <div className="text-xs text-[#32D74B] bg-[#1C3A27] px-3.5 py-3 rounded-xl border border-emerald-900/30 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                  <span className="font-semibold">{passwordSuccess}</span>
+                </div>
+              )}
+
+              {passwordError && (
+                <div className="text-xs text-[#FF453A] bg-[#3A1C1C] px-3.5 py-3 rounded-xl border border-red-900/30 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <span className="font-semibold">{passwordError}</span>
+                </div>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-password" className="text-xs text-slate-500 dark:text-[#98989D]">
+                    새 비밀번호 (최소 6자)
+                  </Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="새 비밀번호 입력"
+                    required
+                    minLength={6}
+                    className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] text-slate-800 dark:text-white text-xs h-9 rounded-xl"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirm-new-password" className="text-xs text-slate-500 dark:text-[#98989D]">
+                    새 비밀번호 확인
+                  </Label>
+                  <Input
+                    id="confirm-new-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="새 비밀번호 재입력"
+                    required
+                    minLength={6}
+                    className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] text-slate-800 dark:text-white text-xs h-9 rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  type="submit"
+                  disabled={passwordLoading || !newPassword || !confirmPassword}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-extrabold text-xs h-9 px-5 rounded-xl"
+                >
+                  {passwordLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      <span>변경 중...</span>
+                    </>
+                  ) : (
+                    "비밀번호 변경하기"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );

@@ -56,9 +56,12 @@ export async function getSettingsAction(): Promise<SystemSettings> {
       });
     }
 
-    // Prioritize currently logged in user's school name from metadata
+    // Prioritize currently logged in user's school name & logo from metadata
     if (user?.user_metadata?.school_name) {
       settings.school_name = user.user_metadata.school_name;
+    }
+    if (user?.user_metadata?.school_logo) {
+      settings.school_logo = user.user_metadata.school_logo;
     }
 
     settings.school_name = cleanSchoolName(settings.school_name);
@@ -82,12 +85,17 @@ export async function saveSettingsAction(settings: Partial<SystemSettings>) {
 
     if (settings.school_name !== undefined) {
       settings.school_name = cleanSchoolName(settings.school_name);
-      
-      // Update user_metadata if user is logged in
-      if (user) {
+    }
+
+    // Update user_metadata if user is logged in
+    if (user) {
+      const updateData: Record<string, unknown> = {};
+      if (settings.school_name !== undefined) updateData.school_name = settings.school_name;
+      if (settings.school_logo !== undefined) updateData.school_logo = settings.school_logo;
+      if (Object.keys(updateData).length > 0) {
         try {
           await supabase.auth.updateUser({
-            data: { school_name: settings.school_name },
+            data: updateData,
           });
         } catch {
           // ignore
@@ -119,5 +127,51 @@ export async function saveSettingsAction(settings: Partial<SystemSettings>) {
   } catch (err) {
     const errorObj = err as Error;
     return { error: errorObj.message };
+  }
+}
+
+/**
+ * Server action to change password for the authenticated user
+ */
+export async function changePasswordAction(
+  formData: FormData
+): Promise<{ success?: boolean; error?: string }> {
+  const newPassword = (formData.get("new_password") as string || "").trim();
+  const confirmPassword = (formData.get("confirm_password") as string || "").trim();
+
+  if (!newPassword || newPassword.length < 6) {
+    return { error: "새 비밀번호는 최소 6자 이상이어야 합니다." };
+  }
+
+  if (newPassword !== confirmPassword) {
+    return { error: "새 비밀번호와 비밀번호 확인이 일치하지 않습니다." };
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return { error: "로그인 세션이 만료되었습니다. 다시 로그인해주세요." };
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (updateError) {
+      return { error: `비밀번호 변경 실패: ${updateError.message}` };
+    }
+
+    const { recordLogAction } = await import("@/app/logs/actions");
+    await recordLogAction(
+      null,
+      "change_password",
+      `비밀번호 변경 완료: 계정='${user.user_metadata?.username || user.email}'`
+    );
+
+    return { success: true };
+  } catch (err) {
+    const errorObj = err as Error;
+    return { error: `비밀번호 변경 중 오류: ${errorObj.message}` };
   }
 }

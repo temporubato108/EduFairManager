@@ -114,16 +114,16 @@ export default function LoginPage() {
           </form>
 
           {/* Signup Promotion Card Footer */}
-          <div className="pt-3 border-t border-slate-100 dark:border-[#2C2C2E]/60 text-center">
-            <p className="text-xs text-slate-500 dark:text-[#98989D] mb-2.5">
-              처음 이용하시는 학교인가요?
+          <div className="pt-3 border-t border-slate-100 dark:border-[#2C2C2E]/60 text-center space-y-2">
+            <p className="text-xs text-slate-500 dark:text-[#98989D]">
+              처음 이용하시는 학교이신가요?
             </p>
             <Link
               href="/signup"
-              className="flex items-center justify-center w-full border border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] font-bold h-11 rounded-xl text-xs gap-1.5 text-slate-800 dark:text-white transition-colors"
+              className="flex items-center justify-center w-full bg-indigo-50 hover:bg-indigo-100/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 font-extrabold h-11 rounded-xl text-xs gap-1.5 transition-all shadow-xs"
             >
-              <span>학교 관리자 무료 회원가입</span>
-              <ArrowRight className="h-3.5 w-3.5 text-indigo-500" />
+              <span>학교 관리자 무료 회원가입 (30초)</span>
+              <ArrowRight className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
             </Link>
           </div>
         </CardContent>

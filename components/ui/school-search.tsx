@@ -70,7 +70,6 @@ export function SchoolSearch({
   const handleSelect = (school: SchoolItem) => {
     setSearchTerm(school.name);
     setSelectedRegion(school.region);
-    setIsDirectInput(false);
     setIsOpen(false);
     if (onChange) {
       onChange(school.name, school.region);
@@ -80,7 +79,6 @@ export function SchoolSearch({
   const handleCustomInput = () => {
     const clean = searchTerm.trim();
     if (!clean) return;
-    setIsDirectInput(true);
     setSelectedRegion("기타");
     setIsOpen(false);
     if (onChange) {
@@ -106,7 +104,6 @@ export function SchoolSearch({
           onChange={(e) => {
             setSearchTerm(e.target.value);
             setIsOpen(true);
-            setIsDirectInput(false);
             if (onChange) {
               onChange(e.target.value, selectedRegion);
             }

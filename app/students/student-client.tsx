@@ -51,7 +51,11 @@ import {
   ExternalLink,
   Copy,
   Check,
+  UserPlus,
+  Sparkles,
+  Wand2,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   getStudentsAction,
   createStudentAction,
@@ -127,6 +131,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
   // Dialog States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isGuestOpen, setIsGuestOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [viewingQrStudent, setViewingQrStudent] = useState<Student | null>(null);
   const [studentQrDataUrl, setStudentQrDataUrl] = useState<string>("");
@@ -141,6 +146,8 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
   const [formClass, setFormClass] = useState("");
   const [formNumber, setFormNumber] = useState("");
   const [formName, setFormName] = useState("");
+  const [formRawNumber, setFormRawNumber] = useState("");
+  const [isRawNumberMode, setIsRawNumberMode] = useState(false);
 
   // Manual Batch Registration Form States
   const [manualGrade, setManualGrade] = useState("1");
@@ -153,6 +160,19 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     { number: 4, name: "" },
     { number: 5, name: "" },
   ]);
+
+  // Guest Registration Form States
+  const [guestTab, setGuestTab] = useState<"batch" | "single">("batch");
+  const [guestSingleAffiliation, setGuestSingleAffiliation] = useState("외부");
+  const [guestSingleNumber, setGuestSingleNumber] = useState("1");
+  const [guestSingleName, setGuestSingleName] = useState("");
+
+  const [guestBatchAffiliation, setGuestBatchAffiliation] = useState("외부");
+  const [guestBatchStartNum, setGuestBatchStartNum] = useState(1);
+  const [guestBatchCount, setGuestBatchCount] = useState(10);
+  const [guestBatchNameMode, setGuestBatchNameMode] = useState<"auto" | "custom">("auto");
+  const [guestBatchPrefix, setGuestBatchPrefix] = useState("외부참가자");
+  const [guestBatchCustomNames, setGuestBatchCustomNames] = useState("");
 
   // Excel Upload File Ref
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -184,9 +204,17 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     }
   }, [viewingQrStudent]);
 
-  // Helper: Extract class label (e.g. "1학년 2반") from student_number
+  // Helper: Extract class label (e.g. "1학년 2반", "[외부] 경운유치원") from student_number
   const getClassLabel = (studentNumber: string) => {
     if (!studentNumber) return "기타";
+    if (studentNumber.startsWith("[외부]")) {
+      const match = studentNumber.match(/\[외부\]\s*([^0-9]+)?/);
+      const org = match && match[1] ? match[1].trim() : "";
+      return org ? `[외부] ${org}` : "[외부] 일반";
+    }
+    if (studentNumber.includes("외부") || studentNumber.includes("게스트")) {
+      return "[외부] 일반";
+    }
     const koreanMatch = studentNumber.match(/(\d+)\s*학년\s*(\d+)\s*반/);
     if (koreanMatch) {
       return `${koreanMatch[1]}학년 ${koreanMatch[2]}반`;
@@ -211,6 +239,12 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
   // Helper: Parse student number for natural ordering (학년 -> 반 -> 번호)
   const parseStudentNumber = (numStr: string) => {
     if (!numStr) return { grade: 999, classNum: 999, number: 999 };
+
+    if (numStr.startsWith("[외부]") || numStr.includes("외부") || numStr.includes("게스트")) {
+      const matchNum = numStr.match(/(\d+)\s*번?/);
+      const num = matchNum ? parseInt(matchNum[1], 10) : 0;
+      return { grade: 100, classNum: 1, number: num };
+    }
 
     const matchKorean = numStr.match(/(\d+)\s*학년\s*(\d+)\s*반(?:\s*(\d+)\s*번)?/);
     if (matchKorean) {
@@ -273,6 +307,12 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
   const classList = Array.from(new Set(students.map((s) => getClassLabel(s.student_number))))
     .filter(Boolean)
     .sort((a, b) => {
+      const isExtA = a.startsWith("[외부]");
+      const isExtB = b.startsWith("[외부]");
+      if (isExtA && !isExtB) return 1;
+      if (!isExtA && isExtB) return -1;
+      if (isExtA && isExtB) return a.localeCompare(b, "ko");
+
       const matchA = a.match(/(\d+)학년\s*(\d+)반/);
       const matchB = b.match(/(\d+)학년\s*(\d+)반/);
       if (matchA && matchB) {
@@ -280,7 +320,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
         if (gradeDiff !== 0) return gradeDiff;
         return parseInt(matchA[2]) - parseInt(matchB[2]);
       }
-      return a.localeCompare(b);
+      return a.localeCompare(b, "ko");
     });
 
   // Filtered and sorted student list
@@ -316,6 +356,8 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     setFormClass("");
     setFormNumber("");
     setFormName("");
+    setFormRawNumber("");
+    setIsRawNumberMode(false);
     setErrorMessage(null);
   };
 
@@ -323,18 +365,21 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
   const openEdit = (student: Student) => {
     setEditingStudent(student);
     
-    // Parse grade-class-number from db representation
-    // format: e.g. "6학년 1반 23번"
+    // Parse grade-class-number from db representation (e.g. "6학년 1반 23번")
     const match = student.student_number.match(/(\d+)학년\s*(\d+)반\s*(\d+)번/);
     if (match) {
+      setIsRawNumberMode(false);
       setFormGrade(match[1]);
       setFormClass(match[2]);
       setFormNumber(match[3]);
+      setFormRawNumber(student.student_number);
     } else {
-      // Fallback
+      // External or custom format (e.g. "[외부] 1번", "[외부] 경운유치원 1번")
+      setIsRawNumberMode(true);
       setFormGrade("");
       setFormClass("");
       setFormNumber("");
+      setFormRawNumber(student.student_number);
     }
     setFormName(student.name);
     setErrorMessage(null);
@@ -455,13 +500,105 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     });
   };
 
+  // Handle Guest / External Student Registration Submit
+  const handleGuestSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEventId) return;
+
+    let studentsToInsert: StudentInput[] = [];
+
+    if (guestTab === "single") {
+      const aff = guestSingleAffiliation.trim();
+      const num = guestSingleNumber.trim() || "1";
+      const name = guestSingleName.trim();
+
+      if (!name) {
+        setErrorMessage("참가자 이름을 입력해주세요.");
+        return;
+      }
+
+      const formattedNum = aff && aff !== "외부" ? `[외부] ${aff} ${num}번` : `[외부] ${num}번`;
+      studentsToInsert = [{
+        student_number: formattedNum,
+        name: name,
+      }];
+    } else {
+      const aff = guestBatchAffiliation.trim();
+      const start = Math.max(1, guestBatchStartNum || 1);
+      const count = Math.max(1, Math.min(200, guestBatchCount || 1));
+
+      if (guestBatchNameMode === "custom") {
+        const names = guestBatchCustomNames
+          .split("\n")
+          .map((n) => n.trim())
+          .filter(Boolean);
+
+        if (names.length === 0) {
+          setErrorMessage("최소 1명 이상의 이름을 입력해주세요.");
+          return;
+        }
+
+        studentsToInsert = names.map((name, idx) => {
+          const num = start + idx;
+          const formattedNum = aff && aff !== "외부" ? `[외부] ${aff} ${num}번` : `[외부] ${num}번`;
+          return {
+            student_number: formattedNum,
+            name: name,
+          };
+        });
+      } else {
+        const prefix = guestBatchPrefix.trim() || "외부참가자";
+        for (let i = 0; i < count; i++) {
+          const num = start + i;
+          const formattedNum = aff && aff !== "외부" ? `[외부] ${aff} ${num}번` : `[외부] ${num}번`;
+          studentsToInsert.push({
+            student_number: formattedNum,
+            name: `${prefix} ${num}`,
+          });
+        }
+      }
+    }
+
+    if (studentsToInsert.length === 0) {
+      setErrorMessage("등록할 외부 학생 데이터가 없습니다.");
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await importStudentsAction(selectedEventId, studentsToInsert);
+      if (res.error) {
+        setErrorMessage(res.error);
+      } else {
+        setIsGuestOpen(false);
+        setErrorMessage(null);
+        setGuestSingleName("");
+        setGuestBatchCustomNames("");
+        loadStudents(selectedEventId);
+      }
+    });
+  };
+
   // Handle Edit Submit
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingStudent || !formGrade || !formClass || !formNumber || !formName) return;
+    if (!editingStudent || !formName) return;
+
+    let formattedNum = "";
+    if (isRawNumberMode) {
+      if (!formRawNumber.trim()) {
+        setErrorMessage("학번 또는 식별 표기를 입력해주세요.");
+        return;
+      }
+      formattedNum = formRawNumber.trim();
+    } else {
+      if (!formGrade || !formClass || !formNumber) {
+        setErrorMessage("학년, 반, 번호를 모두 입력해주세요.");
+        return;
+      }
+      formattedNum = getFormattedNumber(formGrade, formClass, formNumber);
+    }
 
     startTransition(async () => {
-      const formattedNum = getFormattedNumber(formGrade, formClass, formNumber);
       const res = await updateStudentAction(editingStudent.id, {
         student_number: formattedNum,
         name: formName,
@@ -683,10 +820,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
   };
 
   // Handle File Selection and Parse
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processFile = (file: File) => {
     setUploadFile(file);
     setErrorMessage(null);
 
@@ -716,9 +850,13 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
           const grade = normalizedRow["학년"] || normalizedRow["Grade"] || "";
           const cls = normalizedRow["반"] || normalizedRow["Class"] || "";
           const num = normalizedRow["번호"] || normalizedRow["Number"] || "";
-          const name = normalizedRow["이름"] || normalizedRow["Name"] || "";
+          const name = normalizedRow["이름"] || normalizedRow["성명"] || normalizedRow["Name"] || "";
 
-          if (!grade || !cls || !num || !name) {
+          if (!name) {
+            continue;
+          }
+
+          if (!grade || !cls || !num) {
             throw new Error(`행 ${i + 2}: 필수 데이터(학년, 반, 번호, 이름)가 누락되었습니다.`);
           }
 
@@ -743,6 +881,18 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
       }
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
   };
 
   // Handle Import Submit
@@ -979,6 +1129,19 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
             >
               <FileSpreadsheet className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
               <span>엑셀 학생 업로드</span>
+            </Button>
+
+            <Button
+              onClick={() => {
+                setErrorMessage(null);
+                setIsGuestOpen(true);
+              }}
+              disabled={!selectedEventId || isPending}
+              variant="outline"
+              className="border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/60 hover:bg-emerald-100/80 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold gap-2"
+            >
+              <UserPlus className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <span>외부 학생 등록</span>
             </Button>
             
             <Button
@@ -1418,51 +1581,87 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-2">
+              {isRawNumberMode ? (
                 <div className="space-y-1">
-                  <Label htmlFor="e-grade" className="text-xs text-[#98989D]">학년</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="e-raw" className="text-xs text-[#98989D]">학번 / 식별 표기</Label>
+                    <button
+                      type="button"
+                      onClick={() => setIsRawNumberMode(false)}
+                      className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline"
+                    >
+                      재학생 형식으로 전환
+                    </button>
+                  </div>
                   <Input
-                    id="e-grade"
-                    type="number"
-                    min="1"
-                    max="6"
-                    value={formGrade}
-                    onChange={(e) => setFormGrade(e.target.value)}
+                    id="e-raw"
+                    value={formRawNumber}
+                    onChange={(e) => setFormRawNumber(e.target.value)}
+                    placeholder="예: [외부] 1번, [외부] 경운유치원 1번"
                     required
                     disabled={isPending}
-                    className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
+                    className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] font-mono text-sm"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="e-class" className="text-xs text-[#98989D]">반</Label>
-                  <Input
-                    id="e-class"
-                    type="number"
-                    min="1"
-                    value={formClass}
-                    onChange={(e) => setFormClass(e.target.value)}
-                    required
-                    disabled={isPending}
-                    className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
-                  />
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-[#98989D]">학급 및 번호</Label>
+                    <button
+                      type="button"
+                      onClick={() => setIsRawNumberMode(true)}
+                      className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline"
+                    >
+                      외부/직접 표기로 전환
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="e-grade" className="text-[10px] text-slate-400">학년</Label>
+                      <Input
+                        id="e-grade"
+                        type="number"
+                        min="1"
+                        max="6"
+                        value={formGrade}
+                        onChange={(e) => setFormGrade(e.target.value)}
+                        required
+                        disabled={isPending}
+                        className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="e-class" className="text-[10px] text-slate-400">반</Label>
+                      <Input
+                        id="e-class"
+                        type="number"
+                        min="1"
+                        value={formClass}
+                        onChange={(e) => setFormClass(e.target.value)}
+                        required
+                        disabled={isPending}
+                        className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="e-number" className="text-[10px] text-slate-400">번호</Label>
+                      <Input
+                        id="e-number"
+                        type="number"
+                        min="1"
+                        value={formNumber}
+                        onChange={(e) => setFormNumber(e.target.value)}
+                        required
+                        disabled={isPending}
+                        className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="e-number" className="text-xs text-[#98989D]">번호</Label>
-                  <Input
-                    id="e-number"
-                    type="number"
-                    min="1"
-                    value={formNumber}
-                    onChange={(e) => setFormNumber(e.target.value)}
-                    required
-                    disabled={isPending}
-                    className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
-                  />
-                </div>
-              </div>
+              )}
 
               <div className="space-y-1">
-                <Label htmlFor="e-name" className="text-slate-600 dark:text-[#98989D]">학생 이름</Label>
+                <Label htmlFor="e-name" className="text-slate-600 dark:text-[#98989D]">학생 / 참가자 이름</Label>
                 <Input
                   id="e-name"
                   value={formName}
@@ -1523,28 +1722,44 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
               {/* Upload Drop Zone */}
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-300 dark:border-[#2C2C2E] rounded-xl p-8 text-center cursor-pointer hover:border-indigo-600 dark:hover:border-indigo-500 bg-slate-50/50 dark:bg-[#121212]/50 transition duration-150"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={handleFileDrop}
+                className={cn(
+                  "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3",
+                  uploadFile
+                    ? "border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/10"
+                    : "border-slate-200 dark:border-[#2C2C2E] hover:border-indigo-500 bg-slate-50/50 dark:bg-[#121212]"
+                )}
               >
                 <input
-                  type="file"
                   ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
                   onChange={handleFileChange}
-                  accept=".xlsx, .xls"
                   className="hidden"
                 />
-                
-                <FileSpreadsheet className="h-10 w-10 text-emerald-500 mx-auto mb-3" />
+
+                <FileSpreadsheet
+                  className={cn(
+                    "h-10 w-10",
+                    uploadFile ? "text-emerald-500" : "text-slate-400"
+                  )}
+                />
+
                 {uploadFile ? (
                   <div className="space-y-1">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white break-all">{uploadFile.name}</p>
-                    <p className="text-xs text-slate-400 font-mono">
-                      {(uploadFile.size / 1024).toFixed(1)} KB
-                    </p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{uploadFile.name}</p>
+                    <p className="text-xs text-slate-500">{(uploadFile.size / 1024).toFixed(1)} KB</p>
                   </div>
                 ) : (
-                  <div>
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">엑셀 파일을 선택하거나 끌어다 놓으세요.</p>
-                    <p className="text-xs text-slate-400 mt-1">학년, 반, 번호, 이름 형식의 시트여야 합니다.</p>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      엑셀 파일을 여기로 드래그하거나 클릭하여 선택
+                    </p>
+                    <p className="text-xs text-slate-400">지원 형식: .xlsx, .xls, .csv</p>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -1601,6 +1816,261 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
                 )}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* 4. Guest / External Student Registration Dialog */}
+        <Dialog open={isGuestOpen} onOpenChange={setIsGuestOpen}>
+          <DialogContent className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E] text-slate-800 dark:text-white max-w-lg max-h-[90vh] flex flex-col">
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <UserPlus className="h-4 w-4" />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg font-bold">외부 학생 / 게스트 등록</DialogTitle>
+                  <DialogDescription className="dark:text-[#98989D] text-xs">
+                    타교 학생, 유치원생, 체험단, 방문객 등 외부 참가자를 등록하고 QR 코드를 발급합니다.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            {/* Mode Switch Tabs */}
+            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-[#121212] rounded-xl border border-slate-200 dark:border-[#2C2C2E]">
+              <button
+                type="button"
+                onClick={() => setGuestTab("batch")}
+                className={cn(
+                  "py-2 px-3 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                  guestTab === "batch"
+                    ? "bg-white dark:bg-[#2C2C2E] text-emerald-600 dark:text-emerald-400 shadow-xs"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                )}
+              >
+                <Wand2 className="h-3.5 w-3.5" />
+                <span>현장 게스트 일괄 발급</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGuestTab("single")}
+                className={cn(
+                  "py-2 px-3 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                  guestTab === "single"
+                    ? "bg-white dark:bg-[#2C2C2E] text-emerald-600 dark:text-emerald-400 shadow-xs"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                )}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>개별 직접 등록</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleGuestSubmit} className="space-y-4 flex-1 overflow-y-auto pt-1">
+              {errorMessage && (
+                <div className="flex items-center gap-2 rounded-lg border border-[#FF453A]/30 bg-[#3A1C1C] p-3 text-xs text-[#FF453A]">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              {guestTab === "batch" ? (
+                <div className="space-y-3.5">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-600 dark:text-[#98989D]">소속 / 구분</Label>
+                      <Input
+                        value={guestBatchAffiliation}
+                        onChange={(e) => setGuestBatchAffiliation(e.target.value)}
+                        placeholder="예: 외부, 경운유치원"
+                        required
+                        disabled={isPending}
+                        className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-600 dark:text-[#98989D]">시작 번호</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={guestBatchStartNum}
+                        onChange={(e) => setGuestBatchStartNum(parseInt(e.target.value) || 1)}
+                        required
+                        disabled={isPending}
+                        className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-600 dark:text-[#98989D]">발급 인원수</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="200"
+                        value={guestBatchCount}
+                        onChange={(e) => setGuestBatchCount(parseInt(e.target.value) || 1)}
+                        required
+                        disabled={isPending}
+                        className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Name Generation Mode */}
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">이름 생성 방식</Label>
+                      <div className="flex items-center gap-3 text-xs">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="guestNameMode"
+                            checked={guestBatchNameMode === "auto"}
+                            onChange={() => setGuestBatchNameMode("auto")}
+                            className="accent-emerald-600"
+                          />
+                          <span>순번 자동 이름</span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="guestNameMode"
+                            checked={guestBatchNameMode === "custom"}
+                            onChange={() => setGuestBatchNameMode("custom")}
+                            className="accent-emerald-600"
+                          />
+                          <span>명단 직접 붙여넣기</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {guestBatchNameMode === "auto" ? (
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-slate-500">이름 접두사</Label>
+                        <Input
+                          value={guestBatchPrefix}
+                          onChange={(e) => setGuestBatchPrefix(e.target.value)}
+                          placeholder="예: 외부참가자, 게스트"
+                          disabled={isPending}
+                          className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-slate-500">이름 목록 (줄바꿈으로 구분)</Label>
+                        <textarea
+                          value={guestBatchCustomNames}
+                          onChange={(e) => setGuestBatchCustomNames(e.target.value)}
+                          placeholder={"김철수\n이영희\n박민준"}
+                          rows={4}
+                          disabled={isPending}
+                          className="w-full p-2 text-xs rounded-lg bg-slate-50 dark:bg-[#121212] border border-slate-200 dark:border-[#2C2C2E] focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Live Preview Box */}
+                  <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 rounded-xl p-3 text-xs space-y-1">
+                    <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300 font-semibold">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>발급 미리보기</span>
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-300 font-mono">
+                      {guestBatchAffiliation.trim() && guestBatchAffiliation.trim() !== "외부"
+                        ? `[외부] ${guestBatchAffiliation.trim()} ${guestBatchStartNum}번`
+                        : `[외부] ${guestBatchStartNum}번`}{" "}
+                      ~{" "}
+                      {guestBatchAffiliation.trim() && guestBatchAffiliation.trim() !== "외부"
+                        ? `[외부] ${guestBatchAffiliation.trim()} ${guestBatchStartNum + (guestBatchNameMode === "custom" ? (guestBatchCustomNames.split("\n").filter((n) => n.trim()).length || 1) : guestBatchCount) - 1}번`
+                        : `[외부] ${guestBatchStartNum + (guestBatchNameMode === "custom" ? (guestBatchCustomNames.split("\n").filter((n) => n.trim()).length || 1) : guestBatchCount) - 1}번`}{" "}
+                      (총 {guestBatchNameMode === "custom" ? guestBatchCustomNames.split("\n").filter((n) => n.trim()).length : guestBatchCount}명)
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* Single Registration Form */
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-600 dark:text-[#98989D]">소속 / 구분</Label>
+                      <Input
+                        value={guestSingleAffiliation}
+                        onChange={(e) => setGuestSingleAffiliation(e.target.value)}
+                        placeholder="예: 외부, 경운유치원, 인근초"
+                        required
+                        disabled={isPending}
+                        className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-600 dark:text-[#98989D]">식별 번호</Label>
+                      <Input
+                        value={guestSingleNumber}
+                        onChange={(e) => setGuestSingleNumber(e.target.value)}
+                        placeholder="예: 1"
+                        required
+                        disabled={isPending}
+                        className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-600 dark:text-[#98989D]">참가자 이름</Label>
+                    <Input
+                      value={guestSingleName}
+                      onChange={(e) => setGuestSingleName(e.target.value)}
+                      placeholder="예: 김민수"
+                      required
+                      disabled={isPending}
+                      className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"
+                    />
+                  </div>
+
+                  <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 rounded-xl p-3 text-xs space-y-1">
+                    <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300 font-semibold">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>등록 미리보기</span>
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-300 font-mono font-medium">
+                      {guestSingleAffiliation.trim() && guestSingleAffiliation.trim() !== "외부"
+                        ? `[외부] ${guestSingleAffiliation.trim()} ${guestSingleNumber.trim()}번`
+                        : `[외부] ${guestSingleNumber.trim()}번`}{" "}
+                      - {guestSingleName.trim() || "(이름 입력 대기)"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <DialogFooter className="pt-3 border-t border-slate-100 dark:border-[#2C2C2E]">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsGuestOpen(false)}
+                  disabled={isPending}
+                  className="text-slate-500 dark:text-[#98989D]"
+                >
+                  취소
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isPending}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 font-semibold gap-1.5"
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>등록 중...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="h-4 w-4" />
+                      <span>외부 학생 등록 완료</span>
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

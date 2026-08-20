@@ -20,6 +20,12 @@ export interface Student {
 function parseStudentNumber(numStr: string) {
   if (!numStr) return { grade: 999, classNum: 999, number: 999 };
 
+  if (numStr.startsWith("[외부]") || numStr.includes("외부") || numStr.includes("게스트")) {
+    const matchNum = numStr.match(/(\d+)\s*번?/);
+    const num = matchNum ? parseInt(matchNum[1], 10) : 0;
+    return { grade: 100, classNum: 1, number: num };
+  }
+
   const matchKorean = numStr.match(/(\d+)\s*학년\s*(\d+)\s*반(?:\s*(\d+)\s*번)?/);
   if (matchKorean) {
     return {

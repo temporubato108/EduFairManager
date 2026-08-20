@@ -41,7 +41,8 @@ interface StudentJoined {
 
 interface ParticipationRow {
   id: string;
-  created_at: string;
+  scanned_at?: string;
+  created_at?: string;
   booth_id: string | null;
   student_id: string | null;
   booth: unknown;
@@ -68,10 +69,10 @@ export async function getAdminDashboardDataAction(eventId: string) {
 
     if (tsError) throw new Error(tsError.message);
 
-    // 2. Fetch all participations with created_at to aggregate statistics
+    // 2. Fetch all participations with scanned_at to aggregate statistics
     const { data: participations, error: pError } = await supabase
       .from("participations")
-      .select("id, created_at, booth_id, student_id, booth:booths(name, description, operator:teachers(name)), student:students(name, student_number)")
+      .select("id, scanned_at, booth_id, student_id, booth:booths(name, description, operator:teachers(name)), student:students(name, student_number)")
       .eq("event_id", eventId);
 
     if (pError) throw new Error(pError.message);
@@ -121,11 +122,11 @@ export async function getAdminDashboardDataAction(eventId: string) {
       .slice(0, 5);
 
     // 6. Format recent participations (last 6 items)
-    // Sort chronologically by actual created_at timestamp
+    // Sort chronologically by actual scanned_at timestamp
     const sortedRecent = [...rows]
       .sort((a, b) => {
-        const timeA = new Date(a.created_at || 0).getTime();
-        const timeB = new Date(b.created_at || 0).getTime();
+        const timeA = new Date(a.scanned_at || a.created_at || 0).getTime();
+        const timeB = new Date(b.scanned_at || b.created_at || 0).getTime();
         return timeB - timeA;
       })
       .slice(0, 6);
@@ -140,7 +141,7 @@ export async function getAdminDashboardDataAction(eventId: string) {
 
       return {
         id: r.id,
-        createdAt: r.created_at || new Date().toISOString(),
+        createdAt: r.scanned_at || r.created_at || new Date().toISOString(),
         studentName: sName,
         studentNumber: sNum,
         boothName: bName,

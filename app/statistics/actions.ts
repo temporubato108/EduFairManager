@@ -54,7 +54,8 @@ interface StudentJoined {
 
 interface ParticipationRow {
   id: string;
-  created_at: string;
+  scanned_at?: string;
+  created_at?: string;
   booth_id: string | null;
   student_id: string | null;
   booth: unknown;
@@ -104,7 +105,7 @@ export async function getStatisticsDataAction(eventId: string) {
     // 3. Fetch all participations
     const { data: participations, error: pError } = await supabase
       .from("participations")
-      .select("id, booth_id, student_id, booth:booths(name, operator:teachers(name)), student:students(name, student_number)")
+      .select("id, scanned_at, booth_id, student_id, booth:booths(name, operator:teachers(name)), student:students(name, student_number)")
       .eq("event_id", eventId);
 
     if (pError) throw new Error(pError.message);
@@ -223,7 +224,7 @@ export async function getStatisticsDataAction(eventId: string) {
     // Aggregation 4: Raw Logs Timeline
     // ----------------------------------------------------
     const sortedRows = [...rows].sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      (a, b) => new Date(b.scanned_at || b.created_at || 0).getTime() - new Date(a.scanned_at || a.created_at || 0).getTime()
     );
 
     const rawLogs: RawLog[] = sortedRows.map((r) => {
@@ -235,7 +236,7 @@ export async function getStatisticsDataAction(eventId: string) {
       const bName = boothData ? boothData.name : "알 수 없는 부스";
 
       return {
-        timestamp: r.created_at,
+        timestamp: r.scanned_at || r.created_at || new Date().toISOString(),
         studentNumber: sNum,
         studentName: sName,
         boothName: bName,

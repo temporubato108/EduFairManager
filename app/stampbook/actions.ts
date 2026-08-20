@@ -48,7 +48,8 @@ interface StudentRow {
 
 interface ParticipationRow {
   id: string;
-  created_at: string;
+  scanned_at?: string;
+  created_at?: string;
   booth_id: string;
   student_id: string;
 }
@@ -121,7 +122,7 @@ export async function getStudentStampbookAction(eventId: string, studentId: stri
     // 4. Fetch this student's participations
     const { data: participations, error: pError } = await supabase
       .from("participations")
-      .select("id, booth_id, student_id")
+      .select("id, scanned_at, booth_id, student_id")
       .eq("student_id", studentId)
       .eq("event_id", eventId);
 
@@ -135,7 +136,7 @@ export async function getStudentStampbookAction(eventId: string, studentId: stri
     myScans.forEach((p) => {
       // Keep the earliest scan timestamp if duplicate scans exist
       if (!completedBoothTimes[p.booth_id]) {
-        completedBoothTimes[p.booth_id] = p.created_at;
+        completedBoothTimes[p.booth_id] = p.scanned_at || p.created_at || "";
       }
     });
 

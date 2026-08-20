@@ -95,11 +95,12 @@ export async function signupAction(
       try {
         await adminSupabase.from("teachers").upsert({
           id: createdUserData.user.id,
+          email: email,
           name: username,
           role: "admin",
-        });
-      } catch {
-        // non-fatal
+        }, { onConflict: "id" });
+      } catch (err) {
+        console.error("Failed to register teacher record on signup:", err);
       }
     }
 

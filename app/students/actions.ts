@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export interface StudentInput {
@@ -40,12 +40,15 @@ export async function getStudentsAction(eventId: string): Promise<Student[]> {
  */
 export async function createStudentAction(eventId: string, data: StudentInput) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "로그인이 필요합니다." };
   
   // Generate student ID and QR Code payload
   const studentId = crypto.randomUUID();
   const qrCode = `${eventId}:${studentId}`;
 
-  const { data: newStudent, error } = await supabase
+  const adminSupabase = createAdminClient();
+  const { data: newStudent, error } = await adminSupabase
     .from("students")
     .insert([
       {
@@ -79,6 +82,8 @@ export async function importStudentsAction(eventId: string, studentsList: Studen
   }
 
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "로그인이 필요합니다." };
 
   // Map students to database record schema
   const records = studentsList.map((student) => {
@@ -93,8 +98,9 @@ export async function importStudentsAction(eventId: string, studentsList: Studen
     };
   });
 
+  const adminSupabase = createAdminClient();
   // Bulk Insert
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("students")
     .insert(records)
     .select();
@@ -119,7 +125,11 @@ export async function importStudentsAction(eventId: string, studentsList: Studen
  */
 export async function updateStudentAction(id: string, data: Partial<StudentInput>) {
   const supabase = await createClient();
-  const { data: updatedStudent, error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "로그인이 필요합니다." };
+
+  const adminSupabase = createAdminClient();
+  const { data: updatedStudent, error } = await adminSupabase
     .from("students")
     .update(data)
     .eq("id", id)
@@ -142,6 +152,8 @@ export async function updateStudentAction(id: string, data: Partial<StudentInput
  */
 export async function deleteStudentAction(id: string) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "로그인이 필요합니다." };
 
   // Fetch details before soft delete to record event_id, name, and student_number in logs
   const { data: targetStudent } = await supabase
@@ -150,7 +162,8 @@ export async function deleteStudentAction(id: string) {
     .eq("id", id)
     .single();
 
-  const { error } = await supabase
+  const adminSupabase = createAdminClient();
+  const { error } = await adminSupabase
     .from("students")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", id);

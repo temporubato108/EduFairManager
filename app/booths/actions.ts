@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { parseBoothOperator, encodeBoothDescription } from "@/lib/utils";
 
@@ -85,6 +85,8 @@ export async function createBoothAction(data: BoothData) {
     }
   }
 
+  const adminSupabase = createAdminClient();
+
   // 1. Try with operator_name column first
   const payload: Record<string, unknown> = {
     event_id: data.event_id,
@@ -94,7 +96,7 @@ export async function createBoothAction(data: BoothData) {
     operator_name: rawName && rawName !== "미지정" ? rawName : null,
   };
 
-  let { data: newBooth, error } = await supabase
+  let { data: newBooth, error } = await adminSupabase
     .from("booths")
     .insert([payload])
     .select()
@@ -109,7 +111,7 @@ export async function createBoothAction(data: BoothData) {
       description: fallbackDesc,
       operator_id: resolvedOperatorId,
     };
-    const retry = await supabase
+    const retry = await adminSupabase
       .from("booths")
       .insert([fallbackPayload])
       .select()
@@ -158,6 +160,8 @@ export async function updateBoothAction(id: string, data: Partial<BoothData>) {
     }
   }
 
+  const adminSupabase = createAdminClient();
+
   // 1. Try with operator_name column
   const payload: Record<string, unknown> = {};
   if (data.name !== undefined) payload.name = data.name;
@@ -165,7 +169,7 @@ export async function updateBoothAction(id: string, data: Partial<BoothData>) {
   if (resolvedOperatorId !== undefined) payload.operator_id = resolvedOperatorId;
   if (rawName !== undefined) payload.operator_name = rawName && rawName !== "미지정" ? rawName : null;
 
-  let { data: updatedBooth, error } = await supabase
+  let { data: updatedBooth, error } = await adminSupabase
     .from("booths")
     .update(payload)
     .eq("id", id)
@@ -178,13 +182,13 @@ export async function updateBoothAction(id: string, data: Partial<BoothData>) {
     if (rawName !== undefined || data.description !== undefined) {
       let currentDesc = data.description;
       if (currentDesc === undefined) {
-        const { data: cur } = await supabase.from("booths").select("description").eq("id", id).single();
+        const { data: cur } = await adminSupabase.from("booths").select("description").eq("id", id).single();
         currentDesc = cur?.description || "";
       }
       payload.description = encodeBoothDescription(currentDesc, rawName);
     }
 
-    const retry = await supabase
+    const retry = await adminSupabase
       .from("booths")
       .update(payload)
       .eq("id", id)
@@ -221,7 +225,8 @@ export async function deleteBoothAction(id: string) {
     .eq("id", id)
     .maybeSingle();
 
-  const { error } = await supabase
+  const adminSupabase = createAdminClient();
+  const { error } = await adminSupabase
     .from("booths")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", id);

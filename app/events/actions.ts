@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { parseEventDetails, encodeEventDescription } from "@/lib/utils";
 
@@ -64,6 +64,9 @@ export async function getEventsAction() {
 export async function createEventAction(data: EventData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "로그인이 필요합니다." };
+  }
 
   const startDate = data.date ? data.date.split(" ~ ")[0].trim() : new Date().toISOString().split("T")[0];
   const endDate = data.end_date || (data.date?.includes(" ~ ") ? data.date.split(" ~ ")[1].trim() : null);
@@ -72,7 +75,7 @@ export async function createEventAction(data: EventData) {
     name: data.name,
     description: encodeEventDescription(
       data.description,
-      user?.id || null,
+      user.id,
       endDate && endDate !== startDate ? endDate : null
     ),
     date: startDate,
@@ -81,7 +84,8 @@ export async function createEventAction(data: EventData) {
     is_template: data.is_template,
   };
 
-  const { data: newEvent, error } = await supabase
+  const adminSupabase = createAdminClient();
+  const { data: newEvent, error } = await adminSupabase
     .from("events")
     .insert([payload])
     .select()
@@ -114,6 +118,9 @@ export async function createEventAction(data: EventData) {
 export async function updateEventAction(id: string, data: Partial<EventData>) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "로그인이 필요합니다." };
+  }
 
   const updatePayload: Record<string, unknown> = {};
   if (data.name !== undefined) updatePayload.name = data.name;
@@ -131,12 +138,13 @@ export async function updateEventAction(id: string, data: Partial<EventData>) {
     const endDate = data.end_date !== undefined ? data.end_date : (data.date?.includes(" ~ ") ? data.date.split(" ~ ")[1].trim() : null);
     updatePayload.description = encodeEventDescription(
       data.description,
-      user?.id || null,
+      user.id,
       endDate && endDate !== startDate ? endDate : null
     );
   }
 
-  const { data: updatedEvent, error } = await supabase
+  const adminSupabase = createAdminClient();
+  const { data: updatedEvent, error } = await adminSupabase
     .from("events")
     .update(updatePayload)
     .eq("id", id)
@@ -169,7 +177,13 @@ export async function updateEventAction(id: string, data: Partial<EventData>) {
  */
 export async function deleteEventAction(id: string) {
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "로그인이 필요합니다." };
+  }
+
+  const adminSupabase = createAdminClient();
+  const { error } = await adminSupabase
     .from("events")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", id);
@@ -196,9 +210,14 @@ export async function duplicateEventAction(
 ) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "로그인이 필요합니다." };
+  }
+
+  const adminSupabase = createAdminClient();
 
   // 1. Retrieve the source event details
-  const { data: sourceEvent, error: sourceError } = await supabase
+  const { data: sourceEvent, error: sourceError } = await adminSupabase
     .from("events")
     .select("*")
     .eq("id", id)
@@ -218,7 +237,7 @@ export async function duplicateEventAction(
     name: newName,
     description: encodeEventDescription(
       sourceCleanDesc,
-      user?.id || null,
+      user.id,
       endDate && endDate !== startDate ? endDate : null
     ),
     date: startDate,
@@ -227,7 +246,7 @@ export async function duplicateEventAction(
     is_template: false,
   };
 
-  const { data: newEvent, error: createError } = await supabase
+  const { data: newEvent, error: createError } = await adminSupabase
     .from("events")
     .insert([newEventData])
     .select()
@@ -238,7 +257,7 @@ export async function duplicateEventAction(
   }
 
   // 3. Retrieve associated booths from the source event
-  const { data: sourceBooths, error: boothsError } = await supabase
+  const { data: sourceBooths, error: boothsError } = await adminSupabase
     .from("booths")
     .select("*")
     .eq("event_id", id)
@@ -257,7 +276,7 @@ export async function duplicateEventAction(
       operator_id: booth.operator_id,
     }));
 
-    const { error: insertBoothsError } = await supabase
+    const { error: insertBoothsError } = await adminSupabase
       .from("booths")
       .insert(newBooths);
 
@@ -289,9 +308,14 @@ export async function duplicateEventAction(
 export async function saveAsTemplateAction(id: string, templateName: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "로그인이 필요합니다." };
+  }
+
+  const adminSupabase = createAdminClient();
 
   // 1. Retrieve the source event details
-  const { data: sourceEvent, error: sourceError } = await supabase
+  const { data: sourceEvent, error: sourceError } = await adminSupabase
     .from("events")
     .select("*")
     .eq("id", id)
@@ -306,14 +330,14 @@ export async function saveAsTemplateAction(id: string, templateName: string) {
   // 2. Create the template event record
   const templateEventData = {
     name: templateName,
-    description: encodeEventDescription(sourceCleanDesc, user?.id || null),
+    description: encodeEventDescription(sourceCleanDesc, user.id),
     date: new Date().toISOString().split("T")[0],
     status: "ready" as const,
     allow_double_participation: sourceEvent.allow_double_participation,
     is_template: true,
   };
 
-  const { data: templateEvent, error: createError } = await supabase
+  const { data: templateEvent, error: createError } = await adminSupabase
     .from("events")
     .insert([templateEventData])
     .select()
@@ -324,7 +348,7 @@ export async function saveAsTemplateAction(id: string, templateName: string) {
   }
 
   // 3. Retrieve associated booths from the source event
-  const { data: sourceBooths, error: boothsError } = await supabase
+  const { data: sourceBooths, error: boothsError } = await adminSupabase
     .from("booths")
     .select("*")
     .eq("event_id", id)
@@ -343,12 +367,12 @@ export async function saveAsTemplateAction(id: string, templateName: string) {
       operator_id: booth.operator_id,
     }));
 
-    const { error: insertBoothsError } = await supabase
+    const { error: insertBoothsError } = await adminSupabase
       .from("booths")
       .insert(newBooths);
 
     if (insertBoothsError) {
-      return { error: `부스 템플릿 등록 실패: ${insertBoothsError.message}` };
+      return { error: `템플릿 부스 등록 실패: ${insertBoothsError.message}` };
     }
   }
 

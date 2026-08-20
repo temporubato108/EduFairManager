@@ -59,32 +59,38 @@ export async function signupAction(
       return { error: `이미 사용 중인 아이디입니다: '${username}'. 다른 아이디를 입력해주세요.` };
     }
 
-    // 2. Create User in Supabase Auth
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    // 2. Create User via Admin API (Pre-confirmed, zero email rate limit)
+    const { error: createError } = await adminSupabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: {
-          username,
-          school_name: schoolName,
-          region,
-          recovery_pin: recoveryPin,
-          role: "admin",
-        },
+      email_confirm: true,
+      user_metadata: {
+        username,
+        school_name: schoolName,
+        region,
+        recovery_pin: recoveryPin,
+        role: "admin",
       },
     });
 
-    if (signUpError) {
-      return { error: `회원가입 실패: ${signUpError.message}` };
+    if (createError) {
+      if (
+        createError.message.includes("already exists") ||
+        createError.message.includes("User already registered")
+      ) {
+        return { error: `이미 사용 중인 아이디입니다: '${username}'. 다른 아이디를 입력해주세요.` };
+      }
+      return { error: `회원가입 실패: ${createError.message}` };
     }
 
-    // If auto-confirm is enabled or session is returned
-    if (!signUpData.session) {
-      // Direct sign in
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    // 3. Immediately sign in the new user in client session
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      return { error: `가입 완료 후 로그인 실패: ${signInError.message}` };
     }
 
     // 3. Save school name into system settings

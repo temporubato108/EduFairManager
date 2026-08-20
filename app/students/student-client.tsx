@@ -521,11 +521,11 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
               border: 1.5px solid #e2e8f0;
               border-radius: 8px;
               padding: 3px;
-              margin: 4px 0;
+              margin: 2px 0;
             }
             .qr-container img {
-              width: 52mm;
-              height: 52mm;
+              width: 62mm;
+              height: 62mm;
               display: block;
             }
             .footer-guide {
@@ -813,20 +813,20 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
 
           // 4. Student Number (e.g. 6학년 1반 23번)
           ctx.fillStyle = "#4f46e5";
-          ctx.font = "bold 40px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
           ctx.textAlign = "center";
-          ctx.fillText(String(student.student_number || ""), innerX + innerW / 2, innerY + 200);
+          ctx.fillText(String(student.student_number || ""), innerX + innerW / 2, innerY + 185);
 
           // 5. Student Name (Large Bold)
           ctx.fillStyle = "#0f172a";
-          ctx.font = "bold 76px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.font = "bold 72px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
           ctx.textAlign = "center";
-          ctx.fillText(String(student.name || ""), innerX + innerW / 2, innerY + 300);
+          ctx.fillText(String(student.name || ""), innerX + innerW / 2, innerY + 275);
 
-          // 6. Generate and draw QR Code (~55mm x 55mm = 650px)
-          const qrDisplaySize = 650;
+          // 6. Generate and draw Large QR Code (~65mm x 65mm = 770px, +10mm larger)
+          const qrDisplaySize = 770;
           const qrX = innerX + (innerW - qrDisplaySize) / 2;
-          const qrY = innerY + 360;
+          const qrY = innerY + 335;
 
           await QRCode.toCanvas(qrCanvas, getStudentStampbookUrl(student.qr_code), {
             width: qrDisplaySize,
@@ -835,22 +835,22 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
 
           // QR Code container box
           ctx.fillStyle = "#ffffff";
-          ctx.fillRect(qrX - 12, qrY - 12, qrDisplaySize + 24, qrDisplaySize + 24);
+          ctx.fillRect(qrX - 10, qrY - 10, qrDisplaySize + 20, qrDisplaySize + 20);
           ctx.strokeStyle = "#e2e8f0";
           ctx.lineWidth = 3;
-          ctx.strokeRect(qrX - 12, qrY - 12, qrDisplaySize + 24, qrDisplaySize + 24);
+          ctx.strokeRect(qrX - 10, qrY - 10, qrDisplaySize + 20, qrDisplaySize + 20);
 
           ctx.drawImage(qrCanvas, qrX, qrY, qrDisplaySize, qrDisplaySize);
 
           // 7. Footer Guide text
           ctx.fillStyle = "#64748b";
-          ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
           ctx.textAlign = "center";
-          ctx.fillText("💡 부스 방문 시 위 QR코드를 보여주세요", innerX + innerW / 2, innerY + innerH - 70);
+          ctx.fillText("💡 부스 방문 시 위 QR코드를 보여주세요", innerX + innerW / 2, innerY + innerH - 65);
 
           ctx.fillStyle = "#94a3b8";
-          ctx.font = "24px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
-          ctx.fillText("EduFair 스마트 스탬프투어", innerX + innerW / 2, innerY + innerH - 30);
+          ctx.font = "22px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+          ctx.fillText("EduFair 스마트 스탬프투어", innerX + innerW / 2, innerY + innerH - 25);
         }
 
         // Add page to jsPDF

@@ -348,8 +348,8 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             }
             .qr-wrapper img {
-              width: 85mm;
-              height: 85mm;
+              width: 105mm;
+              height: 105mm;
               display: block;
             }
             .guide-box {
@@ -487,23 +487,23 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
 
         // 4. Booth Name (Large Centered)
         ctx.fillStyle = "#0f172a";
-        const boothNameFontSize = booth.name.length > 12 ? 44 : 56;
+        const boothNameFontSize = booth.name.length > 12 ? 40 : 50;
         ctx.font = `bold ${boothNameFontSize}px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif`;
-        ctx.fillText(String(booth.name || ""), canvasWidth / 2, 330);
+        ctx.fillText(String(booth.name || ""), canvasWidth / 2, 305);
 
         // 5. Operator Teacher Name
         ctx.fillStyle = "#64748b";
         ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
-        ctx.fillText(`담당 교사: ${booth.operator_name || "미지정"}`, canvasWidth / 2, 395);
+        ctx.fillText(`담당 교사: ${booth.operator_name || "미지정"}`, canvasWidth / 2, 365);
 
-        // 6. Large QR Code via QRCode.toCanvas
+        // 6. Large QR Code (~108mm = 640px, +20mm larger)
         const kioskUrl = typeof window !== "undefined"
           ? `${window.location.origin}/kiosk?boothId=${booth.id}`
           : "";
 
-        const qrDisplaySize = 520;
+        const qrDisplaySize = 640;
         const qrX = (canvasWidth - qrDisplaySize) / 2;
-        const qrY = 460;
+        const qrY = 415;
 
         await QRCode.toCanvas(qrCanvas, kioskUrl, {
           width: qrDisplaySize,
@@ -520,10 +520,10 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
         ctx.drawImage(qrCanvas, qrX, qrY, qrDisplaySize, qrDisplaySize);
 
         // 7. Bottom Guidance Box
-        const guideY = 1060;
+        const guideY = 1110;
         const guideW = canvasWidth - 240;
         const guideX = 120;
-        const guideH = 210;
+        const guideH = 200;
 
         ctx.fillStyle = "#f8fafc";
         ctx.fillRect(guideX, guideY, guideW, guideH);
@@ -535,13 +535,13 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
         ctx.fillStyle = "#0f172a";
         ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("📌 운영 교사 안내", canvasWidth / 2, guideY + 50);
+        ctx.fillText("📌 운영 교사 안내", canvasWidth / 2, guideY + 48);
 
         // Guide Description lines
         ctx.fillStyle = "#475569";
         ctx.font = "20px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
-        ctx.fillText("스마트폰 카메라로 이 QR 코드를 비추어 접속하면", canvasWidth / 2, guideY + 105);
-        ctx.fillText("본 부스의 참여 기록 전용 키오스크 화면으로 자동 연결됩니다.", canvasWidth / 2, guideY + 145);
+        ctx.fillText("스마트폰 카메라로 이 QR 코드를 비추어 접속하면", canvasWidth / 2, guideY + 100);
+        ctx.fillText("본 부스의 참여 기록 전용 키오스크 화면으로 자동 연결됩니다.", canvasWidth / 2, guideY + 140);
 
         // Add page to jsPDF
         if (i > 0) {

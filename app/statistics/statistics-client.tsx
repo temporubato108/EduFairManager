@@ -622,15 +622,7 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
 
                         {/* Pagination Bar */}
                         {totalStudentPages > 1 && (
-                          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-100 dark:border-[#2C2C2E] bg-slate-50/50 dark:bg-[#181818]">
-                            <div className="text-xs text-slate-500 dark:text-[#98989D]">
-                              총 <strong className="text-slate-800 dark:text-white font-semibold">{filteredStudents.length}</strong>명 중{" "}
-                              <span className="font-medium">
-                                {(studentPage - 1) * PAGE_SIZE + 1} - {Math.min(studentPage * PAGE_SIZE, filteredStudents.length)}
-                              </span>
-                              명 표시 (페이지당 30명)
-                            </div>
-
+                          <div className="flex items-center justify-center p-4 border-t border-slate-100 dark:border-[#2C2C2E] bg-slate-50/50 dark:bg-[#181818]">
                             <div className="flex items-center gap-1.5">
                               <Button
                                 variant="outline"

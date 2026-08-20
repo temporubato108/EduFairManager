@@ -65,6 +65,7 @@ import {
   Student,
   StudentInput,
 } from "./actions";
+import { getSettingsAction } from "@/app/settings/actions";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
@@ -77,6 +78,7 @@ interface EventOption {
 
 interface StudentClientPageProps {
   initialEvents: EventOption[];
+  initialSchoolLogo?: string;
 }
 
 const getStudentStampbookUrl = (qrCode: string) => {
@@ -86,14 +88,110 @@ const getStudentStampbookUrl = (qrCode: string) => {
   return `${origin}/stampbook?code=${qrCode}`;
 };
 
-function StudentQrThumbnail({ code, onClick }: { code: string; onClick: () => void }) {
+/**
+ * Generates a high-quality QR code data URL.
+ * If a valid school logo is provided, overlays the logo badge in the center using ErrorCorrectionLevel 'H'.
+ * If no logo is provided, generates a clean standard QR code without logo.
+ */
+async function generateQrDataUrl(
+  text: string,
+  logoUrl?: string,
+  size: number = 600
+): Promise<string> {
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+
+    const hasLogo = Boolean(logoUrl && logoUrl.trim().length > 10);
+
+    await QRCode.toCanvas(canvas, text, {
+      width: size,
+      margin: 1,
+      errorCorrectionLevel: hasLogo ? "H" : "M",
+      color: {
+        dark: "#000000",
+        light: "#ffffff",
+      },
+    });
+
+    if (!hasLogo || !logoUrl) {
+      return canvas.toDataURL("image/png");
+    }
+
+    // Load logo image
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Logo load failed"));
+      img.src = logoUrl;
+    });
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return canvas.toDataURL("image/png");
+
+    const logoSize = Math.round(size * 0.22);
+    const center = size / 2;
+    const lx = center - logoSize / 2;
+    const ly = center - logoSize / 2;
+
+    const pad = Math.max(3, Math.round(logoSize * 0.1));
+    const badgeSize = logoSize + pad * 2;
+    const badgeX = center - badgeSize / 2;
+    const badgeY = center - badgeSize / 2;
+    const radius = Math.round(badgeSize * 0.2);
+
+    ctx.save();
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.lineWidth = Math.max(2, Math.round(size * 0.006));
+
+    // Draw white background badge with rounded corners
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(badgeX, badgeY, badgeSize, badgeSize, radius);
+    } else {
+      ctx.rect(badgeX, badgeY, badgeSize, badgeSize);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    // Clip to rounded area for the logo image
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(lx, ly, logoSize, logoSize, Math.round(radius * 0.75));
+    } else {
+      ctx.rect(lx, ly, logoSize, logoSize);
+    }
+    ctx.clip();
+
+    ctx.drawImage(img, lx, ly, logoSize, logoSize);
+    ctx.restore();
+
+    return canvas.toDataURL("image/png");
+  } catch (err) {
+    console.warn("QR logo generation fallback:", err);
+    return QRCode.toDataURL(text, { width: size, margin: 1 });
+  }
+}
+
+function StudentQrThumbnail({
+  code,
+  logo,
+  onClick,
+}: {
+  code: string;
+  logo?: string;
+  onClick: () => void;
+}) {
   const [dataUrl, setDataUrl] = useState<string>("");
 
   useEffect(() => {
-    QRCode.toDataURL(getStudentStampbookUrl(code), { width: 64, margin: 0 })
+    generateQrDataUrl(getStudentStampbookUrl(code), logo, 120)
       .then((url) => setDataUrl(url))
       .catch(() => {});
-  }, [code]);
+  }, [code, logo]);
 
   return (
     <div
@@ -103,7 +201,7 @@ function StudentQrThumbnail({ code, onClick }: { code: string; onClick: () => vo
     >
       <div className="w-10 h-10 bg-white p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 group-hover:border-indigo-400 dark:group-hover:border-indigo-500 transition-all flex items-center justify-center shadow-xs flex-shrink-0">
         {dataUrl ? (
-          <img src={dataUrl} alt="Student QR" className="w-9 h-9" />
+          <img src={dataUrl} alt="Student QR" className="w-9 h-9 object-contain" />
         ) : (
           <div className="w-9 h-9 bg-slate-100 dark:bg-slate-800 animate-pulse rounded" />
         )}
@@ -120,7 +218,8 @@ function StudentQrThumbnail({ code, onClick }: { code: string; onClick: () => vo
   );
 }
 
-export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
+export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentClientPageProps) {
+  const [schoolLogo, setSchoolLogo] = useState<string>(initialSchoolLogo || "");
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [selectedClass, setSelectedClass] = useState<string>("ALL");
   const [students, setStudents] = useState<Student[]>([]);
@@ -180,7 +279,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
   const [parsedCount, setParsedCount] = useState<number | null>(null);
   const [parsedData, setParsedData] = useState<StudentInput[]>([]);
 
-  // Load selected event's default preference on start
+  // Load selected event's default preference on start & load settings if missing
   useEffect(() => {
     if (initialEvents.length > 0) {
       const firstEventId = initialEvents[0].id;
@@ -189,20 +288,25 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     }
   }, [initialEvents]);
 
-  // Generate QR Code for viewingQrStudent (encodes full Stampbook URL in HD)
+  useEffect(() => {
+    if (!schoolLogo) {
+      getSettingsAction().then((s) => {
+        if (s.school_logo) setSchoolLogo(s.school_logo);
+      }).catch(() => {});
+    }
+  }, [schoolLogo]);
+
+  // Generate QR Code for viewingQrStudent (encodes full Stampbook URL in HD with center school logo if available)
   useEffect(() => {
     if (viewingQrStudent) {
-      QRCode.toDataURL(getStudentStampbookUrl(viewingQrStudent.qr_code), {
-        margin: 1,
-        width: 600,
-      })
+      generateQrDataUrl(getStudentStampbookUrl(viewingQrStudent.qr_code), schoolLogo, 800)
         .then((url) => setStudentQrDataUrl(url))
         .catch(() => setStudentQrDataUrl(""));
     } else {
       setStudentQrDataUrl("");
       setCopiedLink(false);
     }
-  }, [viewingQrStudent]);
+  }, [viewingQrStudent, schoolLogo]);
 
   // Helper: Extract class label (e.g. "1학년 2반", "[외부] 용산초", "[외부] 유치원 다솜반") from student_number
   const getClassLabel = (studentNumber: string) => {
@@ -1012,6 +1116,23 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
       const activeEventName = activeEvent?.name || "행사";
       const cleanEventName = activeEvent ? activeEvent.name.replace(/\s+/g, "_") : "event";
 
+      // Pre-load school logo image once if registered
+      let schoolLogoImg: HTMLImageElement | null = null;
+      if (schoolLogo && schoolLogo.trim().length > 10) {
+        try {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error("Logo load failed"));
+            img.src = schoolLogo;
+          });
+          schoolLogoImg = img;
+        } catch {
+          schoolLogoImg = null;
+        }
+      }
+
       // Offscreen Canvas
       const canvas = document.createElement("canvas");
       canvas.width = canvasWidth;
@@ -1089,15 +1210,63 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
           ctx.textAlign = "center";
           ctx.fillText(String(student.name || ""), innerX + innerW / 2, innerY + 275);
 
-          // 6. Generate and draw Large QR Code (~65mm x 65mm = 770px, +10mm larger)
+          // 6. Generate and draw Large QR Code (~65mm x 65mm = 770px)
           const qrDisplaySize = 770;
           const qrX = innerX + (innerW - qrDisplaySize) / 2;
           const qrY = innerY + 335;
 
+          qrCanvas.width = qrDisplaySize;
+          qrCanvas.height = qrDisplaySize;
+
           await QRCode.toCanvas(qrCanvas, getStudentStampbookUrl(student.qr_code), {
             width: qrDisplaySize,
             margin: 1,
+            errorCorrectionLevel: schoolLogoImg ? "H" : "M",
           });
+
+          // If school logo image is available, draw center badge and logo on qrCanvas
+          if (schoolLogoImg) {
+            const qrCtx = qrCanvas.getContext("2d");
+            if (qrCtx) {
+              const logoSize = Math.round(qrDisplaySize * 0.22);
+              const center = qrDisplaySize / 2;
+              const lx = center - logoSize / 2;
+              const ly = center - logoSize / 2;
+
+              const pad = Math.max(4, Math.round(logoSize * 0.1));
+              const badgeSize = logoSize + pad * 2;
+              const badgeX = center - badgeSize / 2;
+              const badgeY = center - badgeSize / 2;
+              const radius = Math.round(badgeSize * 0.2);
+
+              qrCtx.save();
+              qrCtx.fillStyle = "#ffffff";
+              qrCtx.strokeStyle = "#cbd5e1";
+              qrCtx.lineWidth = 4;
+
+              // Draw badge background
+              qrCtx.beginPath();
+              if (qrCtx.roundRect) {
+                qrCtx.roundRect(badgeX, badgeY, badgeSize, badgeSize, radius);
+              } else {
+                qrCtx.rect(badgeX, badgeY, badgeSize, badgeSize);
+              }
+              qrCtx.fill();
+              qrCtx.stroke();
+
+              // Clip to badge for logo image
+              qrCtx.beginPath();
+              if (qrCtx.roundRect) {
+                qrCtx.roundRect(lx, ly, logoSize, logoSize, Math.round(radius * 0.75));
+              } else {
+                qrCtx.rect(lx, ly, logoSize, logoSize);
+              }
+              qrCtx.clip();
+
+              qrCtx.drawImage(schoolLogoImg, lx, ly, logoSize, logoSize);
+              qrCtx.restore();
+            }
+          }
 
           // QR Code container box
           ctx.fillStyle = "#ffffff";
@@ -1319,6 +1488,7 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
                       <TableCell>
                         <StudentQrThumbnail
                           code={student.qr_code}
+                          logo={schoolLogo}
                           onClick={() => setViewingQrStudent(student)}
                         />
                       </TableCell>

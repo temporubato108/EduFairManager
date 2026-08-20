@@ -208,6 +208,67 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
     return "기타 학급";
   };
 
+  // Helper: Parse student number for natural ordering (학년 -> 반 -> 번호)
+  const parseStudentNumber = (numStr: string) => {
+    if (!numStr) return { grade: 999, classNum: 999, number: 999 };
+
+    const matchKorean = numStr.match(/(\d+)\s*학년\s*(\d+)\s*반(?:\s*(\d+)\s*번)?/);
+    if (matchKorean) {
+      return {
+        grade: parseInt(matchKorean[1], 10),
+        classNum: parseInt(matchKorean[2], 10),
+        number: matchKorean[3] ? parseInt(matchKorean[3], 10) : 0,
+      };
+    }
+
+    const matchDash = numStr.match(/^(\d+)[-_](\d+)[-_](\d+)$/);
+    if (matchDash) {
+      return {
+        grade: parseInt(matchDash[1], 10),
+        classNum: parseInt(matchDash[2], 10),
+        number: parseInt(matchDash[3], 10),
+      };
+    }
+
+    if (/^\d{5}$/.test(numStr)) {
+      return {
+        grade: parseInt(numStr[0], 10),
+        classNum: parseInt(numStr.substring(1, 3), 10),
+        number: parseInt(numStr.substring(3, 5), 10),
+      };
+    }
+
+    if (/^\d{4}$/.test(numStr)) {
+      return {
+        grade: parseInt(numStr[0], 10),
+        classNum: parseInt(numStr[1], 10),
+        number: parseInt(numStr.substring(2, 4), 10),
+      };
+    }
+
+    const nums = numStr.match(/\d+/g);
+    if (nums && nums.length >= 3) {
+      return {
+        grade: parseInt(nums[0], 10),
+        classNum: parseInt(nums[1], 10),
+        number: parseInt(nums[2], 10),
+      };
+    }
+
+    return { grade: 999, classNum: 999, number: 999 };
+  };
+
+  const sortStudents = (list: Student[]) => {
+    return [...list].sort((a, b) => {
+      const pA = parseStudentNumber(a.student_number);
+      const pB = parseStudentNumber(b.student_number);
+      if (pA.grade !== pB.grade) return pA.grade - pB.grade;
+      if (pA.classNum !== pB.classNum) return pA.classNum - pB.classNum;
+      if (pA.number !== pB.number) return pA.number - pB.number;
+      return a.name.localeCompare(b.name, "ko");
+    });
+  };
+
   // Collect sorted unique class list
   const classList = Array.from(new Set(students.map((s) => getClassLabel(s.student_number))))
     .filter(Boolean)
@@ -222,17 +283,19 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
       return a.localeCompare(b);
     });
 
-  // Filtered student list by class
-  const filteredStudents = selectedClass === "ALL"
-    ? students
-    : students.filter((s) => getClassLabel(s.student_number) === selectedClass);
+  // Filtered and sorted student list
+  const filteredStudents = sortStudents(
+    selectedClass === "ALL"
+      ? students
+      : students.filter((s) => getClassLabel(s.student_number) === selectedClass)
+  );
 
   // Load Students
   const loadStudents = (eventId: string) => {
     startFetchTransition(async () => {
       try {
         const data = await getStudentsAction(eventId);
-        setStudents(data);
+        setStudents(sortStudents(data));
       } catch (err) {
         const errorObj = err as Error;
         setErrorMessage(`학생 목록 로딩 실패: ${errorObj.message}`);

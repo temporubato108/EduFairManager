@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Calendar,
@@ -42,6 +42,7 @@ const navItems = [
 
 export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const cached = getCachedSettings();
   const [schoolName, setSchoolName] = useState(cached ? cleanSchoolName(cached.schoolName) : "EduFair Admin");
@@ -140,6 +141,20 @@ export function Sidebar({ onClose }: SidebarProps) {
               key={item.href}
               href={item.href}
               prefetch={true}
+              onMouseEnter={() => {
+                try {
+                  router.prefetch(item.href);
+                } catch {
+                  // ignore
+                }
+              }}
+              onTouchStart={() => {
+                try {
+                  router.prefetch(item.href);
+                } catch {
+                  // ignore
+                }
+              }}
               onClick={onClose}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",

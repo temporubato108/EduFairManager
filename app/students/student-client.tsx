@@ -54,6 +54,10 @@ import {
   UserPlus,
   Sparkles,
   Wand2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -79,6 +83,19 @@ interface EventOption {
 interface StudentClientPageProps {
   initialEvents: EventOption[];
   initialSchoolLogo?: string;
+}
+
+function getPageNumbers(current: number, total: number): (number | string)[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, "...", total];
+  }
+  if (current >= total - 3) {
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, "...", current - 1, current, current + 1, "...", total];
 }
 
 const getStudentStampbookUrl = (qrCode: string) => {
@@ -156,9 +173,12 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [selectedClass, setSelectedClass] = useState<string>("ALL");
   const [students, setStudents] = useState<Student[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [isFetchPending, startFetchTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const PAGE_SIZE = 30;
 
   // Dialog States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -211,6 +231,11 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [parsedCount, setParsedCount] = useState<number | null>(null);
   const [parsedData, setParsedData] = useState<StudentInput[]>([]);
+
+  // Reset pagination on class or event change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedClass, selectedEventId]);
 
   // Load selected event's default preference on start & load settings if missing
   useEffect(() => {
@@ -1394,61 +1419,149 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
                     : "이 행사에 등록된 학생이 없습니다. 학생 목록을 엑셀로 업로드해 보세요."}
                 </p>
               </div>
-            ) : (
-              <Table>
-                <TableHeader className="border-slate-200 dark:border-[#2C2C2E]">
-                  <TableRow className="hover:bg-transparent border-slate-200 dark:border-[#2C2C2E]">
-                    <TableHead className="w-[35%]">학반정보 (학번)</TableHead>
-                    <TableHead className="w-[30%]">이름</TableHead>
-                    <TableHead className="w-[25%]">학생 QR</TableHead>
-                    <TableHead className="w-[10%] text-right"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStudents.map((student) => (
-                    <TableRow
-                      key={student.id}
-                      className="border-slate-100 hover:bg-slate-50/50 dark:border-[#2C2C2E] dark:hover:bg-[#252525]"
-                    >
-                      <TableCell className="font-mono font-semibold text-slate-800 dark:text-white">
-                        {student.student_number}
-                      </TableCell>
-                      <TableCell className="text-slate-800 dark:text-white font-medium">
-                        {student.name}
-                      </TableCell>
-                      <TableCell>
-                        <StudentQrThumbnail
-                          code={student.qr_code}
-                          onClick={() => setViewingQrStudent(student)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger render={
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 dark:text-[#98989D]">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          } />
-                          <DropdownMenuContent align="end" className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
-                            <DropdownMenuItem onClick={() => openEdit(student)} className="gap-2 cursor-pointer dark:text-white dark:hover:bg-[#252525]">
-                              <Edit2 className="h-3.5 w-3.5" />
-                              <span>학생 수정</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(student.id)}
-                              className="gap-2 cursor-pointer text-rose-600 dark:text-[#FF453A] dark:hover:bg-[#3A1C1C]"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              <span>삭제</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+            ) : (() => {
+              const totalStudentPages = Math.ceil(filteredStudents.length / PAGE_SIZE) || 1;
+              const paginatedStudents = filteredStudents.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+              return (
+                <>
+                  <Table>
+                    <TableHeader className="border-slate-200 dark:border-[#2C2C2E]">
+                      <TableRow className="hover:bg-transparent border-slate-200 dark:border-[#2C2C2E]">
+                        <TableHead className="w-[35%]">학반정보 (학번)</TableHead>
+                        <TableHead className="w-[30%]">이름</TableHead>
+                        <TableHead className="w-[25%]">학생 QR</TableHead>
+                        <TableHead className="w-[10%] text-right"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedStudents.map((student) => (
+                        <TableRow
+                          key={student.id}
+                          className="border-slate-100 hover:bg-slate-50/50 dark:border-[#2C2C2E] dark:hover:bg-[#252525]"
+                        >
+                          <TableCell className="font-mono font-semibold text-slate-800 dark:text-white">
+                            {student.student_number}
+                          </TableCell>
+                          <TableCell className="text-slate-800 dark:text-white font-medium">
+                            {student.name}
+                          </TableCell>
+                          <TableCell>
+                            <StudentQrThumbnail
+                              code={student.qr_code}
+                              onClick={() => setViewingQrStudent(student)}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger render={
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 dark:text-[#98989D]">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              } />
+                              <DropdownMenuContent align="end" className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
+                                <DropdownMenuItem onClick={() => openEdit(student)} className="gap-2 cursor-pointer dark:text-white dark:hover:bg-[#252525]">
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                  <span>학생 수정</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDelete(student.id)}
+                                  className="gap-2 cursor-pointer text-rose-600 dark:text-[#FF453A] dark:hover:bg-[#3A1C1C]"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <span>삭제</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  {/* Pagination Bar */}
+                  {totalStudentPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-100 dark:border-[#2C2C2E] bg-slate-50/50 dark:bg-[#181818]">
+                      <div className="text-xs text-slate-500 dark:text-[#98989D]">
+                        총 <strong className="text-slate-800 dark:text-white font-semibold">{filteredStudents.length}</strong>명 중{" "}
+                        <span className="font-medium">
+                          {(currentPage - 1) * PAGE_SIZE + 1} - {Math.min(currentPage * PAGE_SIZE, filteredStudents.length)}
+                        </span>
+                        명 표시 (페이지당 30명)
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={() => setCurrentPage(1)}
+                          disabled={currentPage === 1}
+                          className="h-8 px-2 text-xs border-slate-200 dark:border-[#2C2C2E]"
+                          title="첫 페이지"
+                        >
+                          <ChevronsLeft className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="h-8 px-2.5 text-xs gap-1 border-slate-200 dark:border-[#2C2C2E]"
+                        >
+                          <ChevronLeft className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">이전</span>
+                        </Button>
+
+                        <div className="flex items-center gap-1 mx-1">
+                          {getPageNumbers(currentPage, totalStudentPages).map((p, idx) =>
+                            p === "..." ? (
+                              <span key={`dots-${idx}`} className="px-1 text-xs text-slate-400">
+                                ...
+                              </span>
+                            ) : (
+                              <Button
+                                key={p}
+                                variant={currentPage === p ? "default" : "outline"}
+                                size="xs"
+                                onClick={() => setCurrentPage(Number(p))}
+                                className={`h-8 w-8 text-xs font-semibold ${
+                                  currentPage === p
+                                    ? "bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500"
+                                    : "border-slate-200 dark:border-[#2C2C2E] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#252525]"
+                                }`}
+                              >
+                                {p}
+                              </Button>
+                            )
+                          )}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={() => setCurrentPage((p) => Math.min(totalStudentPages, p + 1))}
+                          disabled={currentPage === totalStudentPages}
+                          className="h-8 px-2.5 text-xs gap-1 border-slate-200 dark:border-[#2C2C2E]"
+                        >
+                          <span className="hidden sm:inline">다음</span>
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={() => setCurrentPage(totalStudentPages)}
+                          disabled={currentPage === totalStudentPages}
+                          className="h-8 px-2 text-xs border-slate-200 dark:border-[#2C2C2E]"
+                          title="마지막 페이지"
+                        >
+                          <ChevronsRight className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
 

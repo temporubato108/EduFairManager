@@ -34,6 +34,10 @@ import {
   Users,
   CheckCircle2,
   Check,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { getStatisticsDataAction, StatisticsData } from "./actions";
 import * as XLSX from "xlsx";
@@ -62,6 +66,19 @@ const PASTEL_PALETTE = [
   "#0284C7", // Cerulean
 ];
 
+function getPageNumbers(current: number, total: number): (number | string)[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, "...", total];
+  }
+  if (current >= total - 3) {
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, "...", current - 1, current, current + 1, "...", total];
+}
+
 export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProps) {
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [statsData, setStatsData] = useState<StatisticsData | null>(null);
@@ -69,7 +86,10 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overall" | "grade" | "booth" | "student">("overall");
   const [searchQuery, setSearchQuery] = useState("");
+  const [studentPage, setStudentPage] = useState(1);
   const [isMounted, setIsMounted] = useState(false);
+
+  const PAGE_SIZE = 30;
 
   // Set default event
   useEffect(() => {
@@ -77,6 +97,11 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
       setSelectedEventId(initialEvents[0].id);
     }
   }, [initialEvents]);
+
+  // Reset pagination on query or event change
+  useEffect(() => {
+    setStudentPage(1);
+  }, [searchQuery, selectedEventId]);
 
   // Set mounted flag to prevent Recharts SSR hydration errors
   useEffect(() => {
@@ -520,79 +545,167 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
             )}
 
             {/* Tab 4: Student Stamp Book Ledger */}
-            {activeTab === "student" && (
-              <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
-                <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 dark:border-[#2C2C2E] pb-4">
-                  <div>
-                    <CardTitle className="text-base font-bold text-slate-800 dark:text-white">학생별 개인 스탬프 현황</CardTitle>
-                    <CardDescription className="text-xs text-slate-400">
-                      이름이나 반으로 학생을 조회하여 그들이 이수한 부스 세부 명단을 파악합니다.
-                    </CardDescription>
-                  </div>
+            {activeTab === "student" && (() => {
+              const totalStudentPages = Math.ceil(filteredStudents.length / PAGE_SIZE) || 1;
+              const paginatedStudents = filteredStudents.slice((studentPage - 1) * PAGE_SIZE, studentPage * PAGE_SIZE);
 
-                  <div className="relative w-full sm:w-64">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-                    <Input
-                      placeholder="학번, 이름 또는 부스명 검색..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9 bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] text-slate-800 dark:text-white text-xs h-9 rounded-xl"
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0 sm:p-6">
-                  {filteredStudents.length === 0 ? (
-                    <div className="text-center py-10 text-slate-500">
-                      <Search className="h-8 w-8 mx-auto text-slate-300 mb-2" />
-                      <p className="text-xs">일치하는 학생 정보가 없습니다.</p>
+              return (
+                <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
+                  <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 dark:border-[#2C2C2E] pb-4">
+                    <div>
+                      <CardTitle className="text-base font-bold text-slate-800 dark:text-white">학생별 개인 스탬프 현황</CardTitle>
+                      <CardDescription className="text-xs text-slate-400">
+                        이름이나 반으로 학생을 조회하여 그들이 이수한 부스 세부 명단을 파악합니다.
+                      </CardDescription>
                     </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left border-collapse">
-                        <thead>
-                          <tr className="border-b border-slate-200 dark:border-[#2C2C2E] text-slate-400 text-xs">
-                            <th className="p-3 font-semibold">학번</th>
-                            <th className="p-3 font-semibold">이름</th>
-                            <th className="p-3 font-semibold text-center">도장 수</th>
-                            <th className="p-3 font-semibold">체험한 부스 세부 내역</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-[#2C2C2E]/40 text-slate-700 dark:text-slate-300">
-                          {filteredStudents.map((row) => (
-                            <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-[#121212]/30">
-                              <td className="p-3 font-mono text-xs">{row.studentNumber}</td>
-                              <td className="p-3 font-semibold text-slate-800 dark:text-white">{row.name}</td>
-                              <td className="p-3 text-center">
-                                <span className="inline-block bg-indigo-50 border border-indigo-200 text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-900/40 dark:text-indigo-400 px-2 py-0.5 rounded font-mono font-bold text-xs">
-                                  {row.completedBoothsCount}개
-                                </span>
-                              </td>
-                              <td className="p-3">
-                                {row.completedBoothsList.length === 0 ? (
-                                  <span className="text-xs text-slate-500 font-medium">체험 기록 없음</span>
-                                ) : (
-                                  <div className="flex flex-wrap gap-1">
-                                    {row.completedBoothsList.map((boothName, bIdx) => (
-                                      <span
-                                        key={bIdx}
-                                        className="inline-flex items-center gap-0.5 text-[10px] bg-slate-100 text-slate-600 dark:bg-[#121212] dark:text-slate-300 px-1.5 py-0.5 rounded-full border border-slate-200 dark:border-[#2C2C2E]/50"
-                                      >
-                                        <Check className="h-2.5 w-2.5 text-[#32D74B]" />
-                                        {boothName}
-                                      </span>
-                                    ))}
-                                  </div>
+
+                    <div className="relative w-full sm:w-64">
+                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                      <Input
+                        placeholder="학번, 이름 또는 부스명 검색..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E] text-slate-800 dark:text-white text-xs h-9 rounded-xl"
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {filteredStudents.length === 0 ? (
+                      <div className="text-center py-10 text-slate-500">
+                        <Search className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+                        <p className="text-xs">일치하는 학생 정보가 없습니다.</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-slate-200 dark:border-[#2C2C2E] text-slate-400 text-xs">
+                                <th className="p-3 font-semibold">학번</th>
+                                <th className="p-3 font-semibold">이름</th>
+                                <th className="p-3 font-semibold text-center">도장 수</th>
+                                <th className="p-3 font-semibold">체험한 부스 세부 내역</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-[#2C2C2E]/40 text-slate-700 dark:text-slate-300">
+                              {paginatedStudents.map((row) => (
+                                <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-[#121212]/30">
+                                  <td className="p-3 font-mono text-xs">{row.studentNumber}</td>
+                                  <td className="p-3 font-semibold text-slate-800 dark:text-white">{row.name}</td>
+                                  <td className="p-3 text-center">
+                                    <span className="inline-block bg-indigo-50 border border-indigo-200 text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-900/40 dark:text-indigo-400 px-2 py-0.5 rounded font-mono font-bold text-xs">
+                                      {row.completedBoothsCount}개
+                                    </span>
+                                  </td>
+                                  <td className="p-3">
+                                    {row.completedBoothsList.length === 0 ? (
+                                      <span className="text-xs text-slate-500 font-medium">체험 기록 없음</span>
+                                    ) : (
+                                      <div className="flex flex-wrap gap-1">
+                                        {row.completedBoothsList.map((boothName, bIdx) => (
+                                          <span
+                                            key={bIdx}
+                                            className="inline-flex items-center gap-0.5 text-[10px] bg-slate-100 text-slate-600 dark:bg-[#121212] dark:text-slate-300 px-1.5 py-0.5 rounded-full border border-slate-200 dark:border-[#2C2C2E]/50"
+                                          >
+                                            <Check className="h-2.5 w-2.5 text-[#32D74B]" />
+                                            {boothName}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Pagination Bar */}
+                        {totalStudentPages > 1 && (
+                          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-100 dark:border-[#2C2C2E] bg-slate-50/50 dark:bg-[#181818]">
+                            <div className="text-xs text-slate-500 dark:text-[#98989D]">
+                              총 <strong className="text-slate-800 dark:text-white font-semibold">{filteredStudents.length}</strong>명 중{" "}
+                              <span className="font-medium">
+                                {(studentPage - 1) * PAGE_SIZE + 1} - {Math.min(studentPage * PAGE_SIZE, filteredStudents.length)}
+                              </span>
+                              명 표시 (페이지당 30명)
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="xs"
+                                onClick={() => setStudentPage(1)}
+                                disabled={studentPage === 1}
+                                className="h-8 px-2 text-xs border-slate-200 dark:border-[#2C2C2E]"
+                                title="첫 페이지"
+                              >
+                                <ChevronsLeft className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="xs"
+                                onClick={() => setStudentPage((p) => Math.max(1, p - 1))}
+                                disabled={studentPage === 1}
+                                className="h-8 px-2.5 text-xs gap-1 border-slate-200 dark:border-[#2C2C2E]"
+                              >
+                                <ChevronLeft className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">이전</span>
+                              </Button>
+
+                              <div className="flex items-center gap-1 mx-1">
+                                {getPageNumbers(studentPage, totalStudentPages).map((p, idx) =>
+                                  p === "..." ? (
+                                    <span key={`dots-${idx}`} className="px-1 text-xs text-slate-400">
+                                      ...
+                                    </span>
+                                  ) : (
+                                    <Button
+                                      key={p}
+                                      variant={studentPage === p ? "default" : "outline"}
+                                      size="xs"
+                                      onClick={() => setStudentPage(Number(p))}
+                                      className={`h-8 w-8 text-xs font-semibold ${
+                                        studentPage === p
+                                          ? "bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500"
+                                          : "border-slate-200 dark:border-[#2C2C2E] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#252525]"
+                                      }`}
+                                    >
+                                      {p}
+                                    </Button>
+                                  )
                                 )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+                              </div>
+
+                              <Button
+                                variant="outline"
+                                size="xs"
+                                onClick={() => setStudentPage((p) => Math.min(totalStudentPages, p + 1))}
+                                disabled={studentPage === totalStudentPages}
+                                className="h-8 px-2.5 text-xs gap-1 border-slate-200 dark:border-[#2C2C2E]"
+                              >
+                                <span className="hidden sm:inline">다음</span>
+                                <ChevronRight className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="xs"
+                                onClick={() => setStudentPage(totalStudentPages)}
+                                disabled={studentPage === totalStudentPages}
+                                className="h-8 px-2 text-xs border-slate-200 dark:border-[#2C2C2E]"
+                                title="마지막 페이지"
+                              >
+                                <ChevronsRight className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
           </div>
         ) : null}

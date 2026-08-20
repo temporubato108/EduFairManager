@@ -399,9 +399,6 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
           <DialogContent className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E] text-slate-800 dark:text-white max-w-lg">
             <DialogHeader>
               <DialogTitle>새 행사 등록</DialogTitle>
-              <DialogDescription className="dark:text-[#98989D]">
-                새로운 학년 행사 또는 스페셜 페어를 생성합니다.
-              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               {errorMessage && (
@@ -417,7 +414,7 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
                   id="c-name"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="예: 2026학년도 디지털 페어"
+                  placeholder="행사명을 입력하세요"
                   required
                   disabled={isPending}
                   className="bg-slate-50 dark:bg-[#121212] border-slate-200 dark:border-[#2C2C2E]"

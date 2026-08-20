@@ -271,6 +271,9 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               margin: 10mm;
             }
             * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
               box-sizing: border-box;
               margin: 0;
               padding: 0;
@@ -299,20 +302,21 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
             }
             .top-banner {
               width: 100%;
-              background: #0f172a;
+              background: #0f172a !important;
+              background-color: #0f172a !important;
               padding: 24px 20px 20px;
               text-align: center;
             }
             .event-name {
               font-size: 15px;
               font-weight: 700;
-              color: #818cf8;
+              color: #818cf8 !important;
               margin-bottom: 6px;
             }
             .banner-title {
               font-size: 26px;
               font-weight: 800;
-              color: #ffffff;
+              color: #ffffff !important;
               letter-spacing: -0.5px;
             }
             .content-area {
@@ -354,7 +358,8 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
             }
             .guide-box {
               width: 100%;
-              background: #f8fafc;
+              background: #f8fafc !important;
+              background-color: #f8fafc !important;
               border: 1.5px solid #e2e8f0;
               border-radius: 16px;
               padding: 16px 20px;
@@ -372,13 +377,26 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               line-height: 1.5;
             }
             @media print {
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
               body {
                 min-height: auto;
-                background: white;
+                background: white !important;
               }
               .sign-frame {
-                border: 3px solid #cbd5e1;
-                height: 268mm;
+                border: 3px solid #cbd5e1 !important;
+                height: 268mm !important;
+              }
+              .top-banner {
+                background: #0f172a !important;
+                background-color: #0f172a !important;
+              }
+              .guide-box {
+                background: #f8fafc !important;
+                background-color: #f8fafc !important;
               }
             }
           </style>

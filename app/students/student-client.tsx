@@ -445,6 +445,9 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
               margin: 15mm;
             }
             * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
               box-sizing: border-box;
               margin: 0;
               padding: 0;
@@ -485,7 +488,8 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
             }
             .header-banner {
               width: 100%;
-              background: #f8fafc;
+              background: #f8fafc !important;
+              background-color: #f8fafc !important;
               border-bottom: 1.5px solid #e2e8f0;
               padding: 6px 8px;
               text-align: center;
@@ -544,12 +548,21 @@ export function StudentClientPage({ initialEvents }: StudentClientPageProps) {
               color: #94a3b8;
             }
             @media print {
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
               body {
-                background: white;
+                background: white !important;
                 min-height: auto;
               }
               .cut-guide {
-                border: 1px dashed #94a3b8;
+                border: 1px dashed #94a3b8 !important;
+              }
+              .header-banner {
+                background: #f8fafc !important;
+                background-color: #f8fafc !important;
               }
             }
           </style>

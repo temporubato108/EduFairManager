@@ -218,9 +218,11 @@ export function StudentStampbookClientPage() {
     }
   };
 
-  const formatCompletionTime = (isoString: string) => {
+  const formatCompletionTime = (isoString?: string) => {
+    if (!isoString) return "";
     try {
       const date = new Date(isoString);
+      if (isNaN(date.getTime())) return "";
       return date.toLocaleTimeString("ko-KR", {
         hour: "2-digit",
         minute: "2-digit",
@@ -450,11 +452,11 @@ export function StudentStampbookClientPage() {
                       : "border-dashed border-[#2C2C2E] bg-transparent opacity-60"
                   )}
                 >
-                  <CardContent className="p-4 flex flex-col items-center justify-between min-h-[120px] text-center">
+                  <CardContent className="p-4 sm:p-5 flex flex-col items-center justify-between min-h-[145px] text-center">
                     {/* Stamp Indicator Icon */}
                     <div
                       className={cn(
-                        "rounded-full p-2.5 mb-2 border",
+                        "rounded-full p-2.5 mt-0.5 mb-2 border transition-all",
                         isCompleted
                           ? "bg-emerald-900/30 border-[#32D74B] text-[#32D74B] animate-scale-up"
                           : "bg-[#121212] border-[#2C2C2E] text-slate-600"
@@ -463,21 +465,21 @@ export function StudentStampbookClientPage() {
                       {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
                     </div>
 
-                    <div className="space-y-1">
-                      <h4 className="text-xs font-extrabold text-white truncate max-w-[120px]">{booth.name}</h4>
+                    <div className="space-y-1 my-auto">
+                      <h4 className="text-xs sm:text-sm font-extrabold text-white truncate max-w-[130px]">{booth.name}</h4>
                       {booth.description && !isCompleted && (
-                        <p className="text-[9px] text-[#98989D] truncate max-w-[120px]">{booth.description}</p>
+                        <p className="text-[9px] text-[#98989D] truncate max-w-[130px]">{booth.description}</p>
                       )}
                     </div>
 
                     {/* Footer completion date */}
                     <div className="mt-3 w-full">
                       {isCompleted ? (
-                        <span className="inline-block text-[9px] font-bold text-[#32D74B] bg-[#1C3A27] px-2 py-0.5 rounded-full font-mono">
-                          {formatCompletionTime(completionTime)} 완료
+                        <span className="inline-block text-[10px] font-bold text-[#32D74B] bg-[#1C3A27] px-2.5 py-0.5 rounded-full font-mono">
+                          {formatCompletionTime(completionTime) ? `${formatCompletionTime(completionTime)} 완료` : "참여 완료"}
                         </span>
                       ) : (
-                        <span className="text-[9px] font-semibold text-slate-600 bg-[#121212] px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-semibold text-slate-600 bg-[#121212] px-2.5 py-0.5 rounded-full">
                           미체험
                         </span>
                       )}

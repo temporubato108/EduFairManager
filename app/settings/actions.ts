@@ -56,15 +56,35 @@ export async function getSettingsAction(): Promise<SystemSettings> {
       });
     }
 
-    // Prioritize currently logged in user's school name & logo from metadata
+    // 1. Prioritize currently logged in user's school name from metadata
     if (user?.user_metadata?.school_name) {
-      settings.school_name = user.user_metadata.school_name;
-    }
-    if (user?.user_metadata?.school_logo) {
-      settings.school_logo = user.user_metadata.school_logo;
+      settings.school_name = cleanSchoolName(user.user_metadata.school_name);
+    } else {
+      settings.school_name = cleanSchoolName(settings.school_name);
     }
 
-    settings.school_name = cleanSchoolName(settings.school_name);
+    // 2. Fetch user-specific school logo from database table (not cookie/metadata to prevent 494 Request Header Too Large)
+    if (user) {
+      const { data: userLogoRow } = await supabase
+        .from("settings")
+        .select("value")
+        .eq("key", `school_logo_${user.id}`)
+        .single();
+
+      if (userLogoRow?.value && isValidSchoolLogo(userLogoRow.value)) {
+        let rawLogo = userLogoRow.value;
+        if (typeof rawLogo === "string") {
+          try {
+            if ((rawLogo.startsWith('"') && rawLogo.endsWith('"')) || rawLogo.startsWith('{') || rawLogo.startsWith('[')) {
+              rawLogo = JSON.parse(rawLogo);
+            }
+          } catch {
+            // raw
+          }
+        }
+        settings.school_logo = String(rawLogo).trim();
+      }
+    }
 
     if (!isValidSchoolLogo(settings.school_logo)) {
       settings.school_logo = "";
@@ -87,25 +107,32 @@ export async function saveSettingsAction(settings: Partial<SystemSettings>) {
       settings.school_name = cleanSchoolName(settings.school_name);
     }
 
-    // Update user_metadata if user is logged in
-    if (user) {
-      const updateData: Record<string, unknown> = {};
-      if (settings.school_name !== undefined) updateData.school_name = settings.school_name;
-      if (settings.school_logo !== undefined) updateData.school_logo = settings.school_logo;
-      if (Object.keys(updateData).length > 0) {
-        try {
-          await supabase.auth.updateUser({
-            data: updateData,
-          });
-        } catch {
-          // ignore
-        }
+    // 1. Update lightweight school_name in user_metadata only (NEVER put image/base64 in metadata!)
+    if (user && settings.school_name !== undefined) {
+      try {
+        await supabase.auth.updateUser({
+          data: { school_name: settings.school_name },
+        });
+      } catch {
+        // ignore
       }
     }
 
-    // Prepare upsert payload
+    // 2. Save school logo in settings table under user-scoped key (to prevent Cookie header overflow)
+    if (user && settings.school_logo !== undefined) {
+      const logoVal = settings.school_logo ? String(settings.school_logo).trim() : "";
+      await supabase
+        .from("settings")
+        .upsert({
+          key: `school_logo_${user.id}`,
+          value: logoVal,
+        }, { onConflict: "key" });
+    }
+
+    // 3. Prepare upsert payload for general settings
     const entries = Object.entries(settings);
     for (const [key, rawValue] of entries) {
+      if (key === "school_logo" && user) continue; // User-scoped logo handled above
       const cleanValue = typeof rawValue === "string" ? rawValue.trim().replace(/^["'\\]+|["'\\]+$/g, "") : String(rawValue || "");
       const { error } = await supabase
         .from("settings")

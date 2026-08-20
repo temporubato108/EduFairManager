@@ -72,35 +72,29 @@ export function Sidebar({ onClose }: SidebarProps) {
         if (user?.user_metadata?.school_name) {
           name = cleanSchoolName(user.user_metadata.school_name);
         }
-        if (user?.user_metadata?.school_logo) {
-          validLogo = isValidSchoolLogo(user.user_metadata.school_logo) ? String(user.user_metadata.school_logo).trim() : "";
-        }
 
-        if (!name || !validLogo) {
-          const { data } = await supabase
-            .from("settings")
-            .select("key, value");
+        const { data } = await supabase
+          .from("settings")
+          .select("key, value");
 
-          if (data) {
-            const nameRow = data.find((r) => r.key === "school_name");
+        if (data) {
+          if (user) {
+            const userLogoRow = data.find((r) => r.key === `school_logo_${user.id}`);
+            if (userLogoRow?.value && isValidSchoolLogo(userLogoRow.value)) {
+              validLogo = String(userLogoRow.value).trim();
+            }
+          }
+
+          if (!validLogo) {
             const logoRow = data.find((r) => r.key === "school_logo");
-            if (!name) {
-              name = cleanSchoolName(nameRow?.value || "EduFair Admin");
+            if (logoRow?.value && isValidSchoolLogo(logoRow.value)) {
+              validLogo = String(logoRow.value).trim();
             }
-            
-            if (!validLogo) {
-              let rawLogo = logoRow?.value;
-              if (typeof rawLogo === "string") {
-                try {
-                  if ((rawLogo.startsWith('"') && rawLogo.endsWith('"')) || rawLogo.startsWith('{') || rawLogo.startsWith('[')) {
-                    rawLogo = JSON.parse(rawLogo);
-                  }
-                } catch {
-                  // raw
-                }
-              }
-              validLogo = isValidSchoolLogo(rawLogo) ? String(rawLogo).trim() : "";
-            }
+          }
+
+          if (!name) {
+            const nameRow = data.find((r) => r.key === "school_name");
+            name = cleanSchoolName(nameRow?.value || "EduFair Admin");
           }
         }
 

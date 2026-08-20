@@ -308,9 +308,9 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               text-align: center;
             }
             .event-name {
-              font-size: 15px;
-              font-weight: 700;
-              color: #818cf8 !important;
+              font-size: 18px;
+              font-weight: 800;
+              color: #a5b4fc !important;
               margin-bottom: 6px;
             }
             .banner-title {
@@ -326,13 +326,13 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               flex-direction: column;
               align-items: center;
               justify-content: space-evenly;
-              padding: 24px 30px 28px;
+              padding: 20px 30px 24px;
             }
             .booth-header {
               text-align: center;
             }
             .booth-name {
-              font-size: 34px;
+              font-size: 36px;
               font-weight: 900;
               color: #0f172a;
               margin-bottom: 8px;
@@ -340,7 +340,7 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               line-height: 1.2;
             }
             .operator-name {
-              font-size: 18px;
+              font-size: 20px;
               font-weight: 700;
               color: #64748b;
             }
@@ -352,8 +352,8 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             }
             .qr-wrapper img {
-              width: 105mm;
-              height: 105mm;
+              width: 110mm;
+              height: 110mm;
               display: block;
             }
             .guide-box {
@@ -366,13 +366,13 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               text-align: center;
             }
             .guide-title {
-              font-size: 17px;
+              font-size: 19px;
               font-weight: 800;
               color: #0f172a;
               margin-bottom: 6px;
             }
             .guide-desc {
-              font-size: 13px;
+              font-size: 15px;
               color: #475569;
               line-height: 1.5;
             }
@@ -493,8 +493,8 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
         ctx.fillRect(60, 60, canvasWidth - 120, 160);
 
         // Event Name
-        ctx.fillStyle = "#818cf8";
-        ctx.font = "bold 22px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+        ctx.fillStyle = "#a5b4fc";
+        ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(activeEventName, canvasWidth / 2, 115);
 
@@ -503,25 +503,25 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
         ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
         ctx.fillText("EduFair 부스 안내판", canvasWidth / 2, 175);
 
-        // 4. Booth Name (Large Centered)
+        // 4. Booth Name (Large Centered, +2pt)
         ctx.fillStyle = "#0f172a";
-        const boothNameFontSize = booth.name.length > 12 ? 40 : 50;
+        const boothNameFontSize = booth.name.length > 12 ? 44 : 54;
         ctx.font = `bold ${boothNameFontSize}px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif`;
         ctx.fillText(String(booth.name || ""), canvasWidth / 2, 305);
 
-        // 5. Operator Teacher Name
+        // 5. Operator Teacher Name (+2pt)
         ctx.fillStyle = "#64748b";
-        ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+        ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
         ctx.fillText(`담당 교사: ${booth.operator_name || "미지정"}`, canvasWidth / 2, 365);
 
-        // 6. Large QR Code (~108mm = 640px, +20mm larger)
+        // 6. Large QR Code (+20px: 680px)
         const kioskUrl = typeof window !== "undefined"
           ? `${window.location.origin}/kiosk?boothId=${booth.id}`
           : "";
 
-        const qrDisplaySize = 640;
+        const qrDisplaySize = 680;
         const qrX = (canvasWidth - qrDisplaySize) / 2;
-        const qrY = 415;
+        const qrY = 405;
 
         await QRCode.toCanvas(qrCanvas, kioskUrl, {
           width: qrDisplaySize,
@@ -537,8 +537,8 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
 
         ctx.drawImage(qrCanvas, qrX, qrY, qrDisplaySize, qrDisplaySize);
 
-        // 7. Bottom Guidance Box
-        const guideY = 1110;
+        // 7. Bottom Guidance Box (+2pt)
+        const guideY = 1125;
         const guideW = canvasWidth - 240;
         const guideX = 120;
         const guideH = 200;
@@ -551,15 +551,15 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
 
         // Guide Title
         ctx.fillStyle = "#0f172a";
-        ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+        ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("📌 운영 교사 안내", canvasWidth / 2, guideY + 48);
 
         // Guide Description lines
         ctx.fillStyle = "#475569";
-        ctx.font = "20px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
+        ctx.font = "24px -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif";
         ctx.fillText("스마트폰 카메라로 이 QR 코드를 비추어 접속하면", canvasWidth / 2, guideY + 100);
-        ctx.fillText("본 부스의 참여 기록 전용 키오스크 화면으로 자동 연결됩니다.", canvasWidth / 2, guideY + 140);
+        ctx.fillText("본 부스의 참여 기록 전용 키오스크 화면으로 자동 연결됩니다.", canvasWidth / 2, guideY + 145);
 
         // Add page to jsPDF
         if (i > 0) {
@@ -937,34 +937,34 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
               <div className="flex flex-col items-center justify-center p-2 sm:p-3 space-y-3">
                 {/* Booth Sign Preview Container */}
                 <div className="w-full max-w-[280px] bg-white rounded-2xl border-2 border-slate-300 dark:border-slate-600 shadow-md overflow-hidden flex flex-col text-slate-800 text-center">
-                  <div className="bg-[#0f172a] py-2 px-3 text-center">
-                    <p className="text-[10px] font-bold text-indigo-400 truncate">
+                  <div className="bg-[#0f172a] py-2.5 px-3 text-center">
+                    <p className="text-[13px] font-extrabold text-indigo-300 truncate">
                       {initialEvents.find((e) => e.id === selectedEventId)?.name || "EduFair 행사"}
                     </p>
                     <p className="text-xs font-black text-white">EduFair 부스 안내판</p>
                   </div>
                   
                   <div className="pt-3 pb-1 space-y-0.5 px-3">
-                    <h3 className="text-lg font-black text-slate-900 tracking-tight leading-tight">{viewingQrBooth.name}</h3>
-                    <p className="text-xs font-bold text-slate-500">담당 교사: {viewingQrBooth.operator_name || "미지정"}</p>
+                    <h3 className="text-[20px] font-black text-slate-900 tracking-tight leading-tight">{viewingQrBooth.name}</h3>
+                    <p className="text-sm font-bold text-slate-500">담당 교사: {viewingQrBooth.operator_name || "미지정"}</p>
                   </div>
                   
-                  {/* QR Display area */}
+                  {/* QR Display area (+20px: w-[196px] h-[196px]) */}
                   <div className="px-3 py-1 flex items-center justify-center">
                     <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-xs inline-block">
                       {qrCodeDataUrl ? (
-                        <img src={qrCodeDataUrl} alt={`${viewingQrBooth.name} QR`} className="w-44 h-44 object-contain" />
+                        <img src={qrCodeDataUrl} alt={`${viewingQrBooth.name} QR`} className="w-[196px] h-[196px] object-contain" />
                       ) : (
-                        <div className="w-44 h-44 flex items-center justify-center bg-slate-50">
+                        <div className="w-[196px] h-[196px] flex items-center justify-center bg-slate-50">
                           <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <div className="m-2.5 p-2 bg-slate-50 rounded-xl border border-slate-200 text-[10px] text-slate-600 space-y-0.5">
-                    <p className="font-bold text-slate-800">📌 운영 교사 안내</p>
-                    <p className="text-slate-500 text-[9px] leading-relaxed">스마트폰 카메라로 스캔 시 키오스크 화면으로 자동 연결됩니다.</p>
+                  <div className="m-2.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 space-y-0.5">
+                    <p className="font-bold text-slate-800 text-[12px]">📌 운영 교사 안내</p>
+                    <p className="text-slate-500 text-[11px] leading-relaxed">스마트폰 카메라로 스캔 시 키오스크 화면으로 자동 연결됩니다.</p>
                   </div>
                 </div>
 

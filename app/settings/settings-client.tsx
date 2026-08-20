@@ -190,7 +190,7 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center shadow-xs mb-1">
                           <School className="h-5 w-5" />
                         </div>
-                        <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 leading-tight">기본 학교 이미지</span>
+                        <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 leading-tight">기본 로고</span>
                       </div>
                     )}
                   </div>
@@ -228,8 +228,8 @@ export function SettingsClientPage({ initialSettings }: SettingsClientPageProps)
                     </div>
                     <p className="text-[11px] text-slate-400 dark:text-[#98989D]">
                       {schoolLogo
-                        ? "사용자 지정 학교 로고가 등록되었습니다. 삭제 시 기본 학교 이미지로 자동 복구됩니다."
-                        : "로고 이미지를 따로 업로드하지 않을 시, 기본 학교 이미지가 자동으로 적용됩니다."}
+                        ? "사용자 지정 학교 로고가 등록되었습니다. 삭제 시 기본 로고로 자동 복구됩니다."
+                        : "로고 이미지를 따로 업로드하지 않을 시, 기본 로고가 자동으로 적용됩니다."}
                     </p>
                   </div>
                 </div>

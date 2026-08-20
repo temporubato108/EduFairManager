@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { parseEventDetails, encodeEventDescription } from "@/lib/utils";
 
 export interface EventData {
   name: string;
@@ -13,10 +14,13 @@ export interface EventData {
 }
 
 /**
- * Fetch all events that are not soft-deleted
+ * Fetch all events that are not soft-deleted and belong to the logged-in user
  */
 export async function getEventsAction() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from("events")
     .select("*")
@@ -26,17 +30,45 @@ export async function getEventsAction() {
   if (error) {
     throw new Error(error.message);
   }
-  return data;
+
+  // Filter events belonging to current logged-in user (or legacy admin test account)
+  const isLegacyAdmin = user.email === "admin@school.kr" || user.id === "1b6e4ab3-e40b-4ad2-80bc-063271019707";
+
+  const userEvents = (data || [])
+    .filter((e) => {
+      const { owner_id } = parseEventDetails(e);
+      if (owner_id) {
+        return owner_id === user.id;
+      }
+      // If no owner_id tag exists, only show to legacy admin account
+      return isLegacyAdmin;
+    })
+    .map((e) => {
+      const { description } = parseEventDetails(e);
+      return {
+        ...e,
+        description,
+      };
+    });
+
+  return userEvents;
 }
 
 /**
- * Create a new event
+ * Create a new event tagged with the creator's user_id
  */
 export async function createEventAction(data: EventData) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const payload = {
+    ...data,
+    description: encodeEventDescription(data.description, user?.id || null),
+  };
+
   const { data: newEvent, error } = await supabase
     .from("events")
-    .insert([data])
+    .insert([payload])
     .select()
     .single();
 
@@ -48,7 +80,8 @@ export async function createEventAction(data: EventData) {
   await recordLogAction(newEvent.id, "create_event", `행사 생성 완료: 이름='${newEvent.name}', 날짜='${newEvent.date}'`);
 
   revalidatePath("/events");
-  return { success: true, data: newEvent };
+  const { description } = parseEventDetails(newEvent);
+  return { success: true, data: { ...newEvent, description } };
 }
 
 /**
@@ -56,9 +89,16 @@ export async function createEventAction(data: EventData) {
  */
 export async function updateEventAction(id: string, data: Partial<EventData>) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const updatePayload: Record<string, unknown> = { ...data };
+  if (data.description !== undefined) {
+    updatePayload.description = encodeEventDescription(data.description, user?.id || null);
+  }
+
   const { data: updatedEvent, error } = await supabase
     .from("events")
-    .update(data)
+    .update(updatePayload)
     .eq("id", id)
     .select()
     .single();
@@ -71,7 +111,8 @@ export async function updateEventAction(id: string, data: Partial<EventData>) {
   await recordLogAction(id, "update_event", `행사 정보 수정 완료: 이름='${updatedEvent.name}', 상태='${updatedEvent.status}'`);
 
   revalidatePath("/events");
-  return { success: true, data: updatedEvent };
+  const { description } = parseEventDetails(updatedEvent);
+  return { success: true, data: { ...updatedEvent, description } };
 }
 
 /**
@@ -100,6 +141,7 @@ export async function deleteEventAction(id: string) {
  */
 export async function duplicateEventAction(id: string, newName: string, newDate: string) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   // 1. Retrieve the source event details
   const { data: sourceEvent, error: sourceError } = await supabase
@@ -112,10 +154,12 @@ export async function duplicateEventAction(id: string, newName: string, newDate:
     return { error: `원본 행사를 찾을 수 없습니다: ${sourceError.message}` };
   }
 
+  const { description: sourceCleanDesc } = parseEventDetails(sourceEvent);
+
   // 2. Create the duplicated event (set default status to 'ready')
   const newEventData = {
     name: newName,
-    description: sourceEvent.description,
+    description: encodeEventDescription(sourceCleanDesc, user?.id || null),
     date: newDate,
     status: "ready" as const,
     allow_double_participation: sourceEvent.allow_double_participation,
@@ -165,7 +209,8 @@ export async function duplicateEventAction(id: string, newName: string, newDate:
   await recordLogAction(newEvent.id, "duplicate_event", `행사 복제 완료: 원본='${id}' -> 신규='${newEvent.name}'`);
 
   revalidatePath("/events");
-  return { success: true, data: newEvent };
+  const { description } = parseEventDetails(newEvent);
+  return { success: true, data: { ...newEvent, description } };
 }
 
 /**
@@ -173,6 +218,7 @@ export async function duplicateEventAction(id: string, newName: string, newDate:
  */
 export async function saveAsTemplateAction(id: string, templateName: string) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   // 1. Retrieve the source event details
   const { data: sourceEvent, error: sourceError } = await supabase
@@ -185,10 +231,12 @@ export async function saveAsTemplateAction(id: string, templateName: string) {
     return { error: `원본 행사를 찾을 수 없습니다: ${sourceError.message}` };
   }
 
+  const { description: sourceCleanDesc } = parseEventDetails(sourceEvent);
+
   // 2. Create the template event record
   const templateEventData = {
     name: templateName,
-    description: sourceEvent.description,
+    description: encodeEventDescription(sourceCleanDesc, user?.id || null),
     date: new Date().toISOString().split("T")[0],
     status: "ready" as const,
     allow_double_participation: sourceEvent.allow_double_participation,

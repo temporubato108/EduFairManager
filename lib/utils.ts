@@ -87,3 +87,34 @@ export function encodeBoothDescription(
   return cleanDesc || null;
 }
 
+export function parseEventDetails(event: { description?: string | null }): {
+  owner_id: string | null;
+  description: string | null;
+} {
+  let description = event.description || null;
+  let owner_id: string | null = null;
+
+  if (description && description.includes("<!--owner:")) {
+    const match = description.match(/<!--owner:(.*?)-->/);
+    if (match && match[1]) {
+      owner_id = match[1].trim();
+      description = description.replace(/<!--owner:.*?-->\s*/g, "").trim() || null;
+    }
+  }
+
+  return { owner_id, description };
+}
+
+export function encodeEventDescription(
+  description?: string | null,
+  ownerId?: string | null
+): string | null {
+  const cleanDesc = (description || "").replace(/<!--owner:.*?-->\s*/g, "").trim();
+  const cleanOwner = (ownerId || "").trim();
+
+  if (cleanOwner) {
+    return `<!--owner:${cleanOwner}-->${cleanDesc}`;
+  }
+  return cleanDesc || null;
+}
+

@@ -17,10 +17,27 @@ import {
   Trophy,
   Volume2,
   VolumeX,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { getStudentStampbookAction, StudentStampbookData } from "./actions";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
+
+function getPageNumbers(current: number, total: number): (number | string)[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, "...", total];
+  }
+  if (current >= total - 3) {
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, "...", current - 1, current, current + 1, "...", total];
+}
 
 export function StudentStampbookClientPage() {
   const searchParams = useSearchParams();
@@ -60,7 +77,10 @@ export function StudentStampbookClientPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"stamps" | "leaderboard">("stamps");
+  const [leaderboardPage, setLeaderboardPage] = useState(1);
   const [inputCode, setInputCode] = useState("");
+
+  const LEADERBOARD_PAGE_SIZE = 10;
 
   // Sound effects state (plays subtle chime when a new stamp is awarded while page is open!)
   const [chimeMuted, setChimeMuted] = useState(true);
@@ -481,7 +501,7 @@ export function StudentStampbookClientPage() {
                       )}
                       {booth.operator_name && (
                         <p className="text-[9.5px] text-indigo-600 dark:text-indigo-400 font-medium truncate max-w-[135px]">
-                          담당: {booth.operator_name} 교사
+                          담당교사: {booth.operator_name}
                         </p>
                       )}
                     </div>
@@ -506,70 +526,151 @@ export function StudentStampbookClientPage() {
         )}
 
         {/* Tab 2: Live Leaderboard ranking list */}
-        {activeTab === "leaderboard" && (
-          <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E] shadow-sm rounded-2xl overflow-hidden">
-            <CardHeader className="pb-3 border-b border-slate-100 dark:border-[#2C2C2E]/60 p-5">
-              <div className="flex items-center gap-1.5">
-                <Trophy className="h-4.5 w-4.5 text-amber-500" />
-                <CardTitle className="text-sm font-bold text-slate-900 dark:text-white">누적 스탬프 리더보드 (Top 10)</CardTitle>
-              </div>
-              <CardDescription className="text-[10px] text-slate-500 dark:text-[#98989D]">
-                동률 발생 시 반 번호 순으로 자동 정렬됩니다.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y divide-slate-100 dark:divide-[#2C2C2E]/40">
-                {stampbook.leaderboard.map((item) => {
-                  const isMe = item.studentId === stampbook.student.id;
-                  return (
-                    <div
-                      key={item.studentId}
-                      className={cn(
-                        "flex items-center justify-between p-3.5 text-xs transition-colors",
-                        isMe
-                          ? "bg-indigo-50/80 dark:bg-indigo-950/30 border-y border-indigo-200 dark:border-indigo-800/40 font-semibold"
-                          : "hover:bg-slate-50 dark:hover:bg-slate-800/20"
-                      )}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {/* Rank tag */}
-                        <span
-                          className={cn(
-                            "flex h-5.5 w-5.5 items-center justify-center rounded-lg text-[10px] font-black",
-                            item.rank === 1 && "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300",
-                            item.rank === 2 && "bg-slate-100 text-slate-800 dark:bg-[#2C2C2E] dark:text-slate-200",
-                            item.rank === 3 && "bg-amber-50 text-amber-800 border border-amber-200 dark:bg-[#3A2E1C] dark:text-amber-500",
-                            item.rank > 3 && "bg-slate-100 dark:bg-[#121212] text-slate-500"
-                          )}
-                        >
-                          {item.rank}
-                        </span>
-                        
-                        <div className="min-w-0">
-                          <p className="text-slate-900 dark:text-white font-semibold truncate flex items-center gap-1">
-                            {item.name}
-                            {isMe && (
-                              <span className="text-[9px] bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 px-1.5 py-0.5 rounded-full font-bold">나</span>
+        {activeTab === "leaderboard" && (() => {
+          const totalLeaderboardPages = Math.ceil(stampbook.leaderboard.length / LEADERBOARD_PAGE_SIZE) || 1;
+          const paginatedLeaderboard = stampbook.leaderboard.slice(
+            (leaderboardPage - 1) * LEADERBOARD_PAGE_SIZE,
+            leaderboardPage * LEADERBOARD_PAGE_SIZE
+          );
+
+          return (
+            <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E] shadow-sm rounded-2xl overflow-hidden">
+              <CardHeader className="pb-3 border-b border-slate-100 dark:border-[#2C2C2E]/60 p-5">
+                <div className="flex items-center gap-1.5">
+                  <Trophy className="h-4.5 w-4.5 text-amber-500" />
+                  <CardTitle className="text-sm font-bold text-slate-900 dark:text-white">누적 스탬프 명예의 전당 (Top 30)</CardTitle>
+                </div>
+                <CardDescription className="text-[10px] text-slate-500 dark:text-[#98989D]">
+                  동률 발생 시 반 번호 순으로 자동 정렬됩니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y divide-slate-100 dark:divide-[#2C2C2E]/40">
+                  {paginatedLeaderboard.map((item) => {
+                    const isMe = item.studentId === stampbook.student.id;
+                    return (
+                      <div
+                        key={item.studentId}
+                        className={cn(
+                          "flex items-center justify-between p-3.5 text-xs transition-colors",
+                          isMe
+                            ? "bg-indigo-50/80 dark:bg-indigo-950/30 border-y border-indigo-200 dark:border-indigo-800/40 font-semibold"
+                            : "hover:bg-slate-50 dark:hover:bg-slate-800/20"
+                        )}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {/* Rank tag */}
+                          <span
+                            className={cn(
+                              "flex h-5.5 w-5.5 items-center justify-center rounded-lg text-[10px] font-black",
+                              item.rank === 1 && "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300",
+                              item.rank === 2 && "bg-slate-100 text-slate-800 dark:bg-[#2C2C2E] dark:text-slate-200",
+                              item.rank === 3 && "bg-amber-50 text-amber-800 border border-amber-200 dark:bg-[#3A2E1C] dark:text-amber-500",
+                              item.rank > 3 && "bg-slate-100 dark:bg-[#121212] text-slate-500"
                             )}
-                          </p>
-                          <p className="text-[9px] text-slate-500 dark:text-[#98989D] font-mono">
-                            {item.studentNumber.replace("학년 ", "").replace("반 ", "-").replace("번", "")}
-                          </p>
+                          >
+                            {item.rank}
+                          </span>
+                          
+                          <div className="min-w-0">
+                            <p className="text-slate-900 dark:text-white font-semibold truncate flex items-center gap-1">
+                              {item.name}
+                              {isMe && (
+                                <span className="text-[9px] bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 px-1.5 py-0.5 rounded-full font-bold">나</span>
+                              )}
+                            </p>
+                            <p className="text-[9px] text-slate-500 dark:text-[#98989D] font-mono">
+                              {item.studentNumber.replace("학년 ", "").replace("반 ", "-").replace("번", "")}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 font-mono">
+                          <Award className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                          <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">{item.completedCount}</span>
+                          <span className="text-[9px] text-slate-500">개</span>
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
 
-                      <div className="flex items-center gap-1.5 font-mono">
-                        <Award className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-                        <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">{item.completedCount}</span>
-                        <span className="text-[9px] text-slate-500">개</span>
+                {/* Centered Pagination Bar */}
+                {totalLeaderboardPages > 1 && (
+                  <div className="flex items-center justify-center p-3 border-t border-slate-100 dark:border-[#2C2C2E]/60 bg-slate-50/50 dark:bg-[#181818]">
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        onClick={() => setLeaderboardPage(1)}
+                        disabled={leaderboardPage === 1}
+                        className="h-7 px-2 text-xs border-slate-200 dark:border-[#2C2C2E]"
+                        title="첫 페이지"
+                      >
+                        <ChevronsLeft className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        onClick={() => setLeaderboardPage((p) => Math.max(1, p - 1))}
+                        disabled={leaderboardPage === 1}
+                        className="h-7 px-2 text-xs gap-0.5 border-slate-200 dark:border-[#2C2C2E]"
+                      >
+                        <ChevronLeft className="h-3 w-3" />
+                        <span className="text-[11px]">이전</span>
+                      </Button>
+
+                      <div className="flex items-center gap-1 mx-1">
+                        {getPageNumbers(leaderboardPage, totalLeaderboardPages).map((p, idx) =>
+                          p === "..." ? (
+                            <span key={`dots-${idx}`} className="px-1 text-xs text-slate-400">
+                              ...
+                            </span>
+                          ) : (
+                            <Button
+                              key={p}
+                              variant={leaderboardPage === p ? "default" : "outline"}
+                              size="xs"
+                              onClick={() => setLeaderboardPage(Number(p))}
+                              className={`h-7 w-7 text-xs font-semibold ${
+                                leaderboardPage === p
+                                  ? "bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500"
+                                  : "border-slate-200 dark:border-[#2C2C2E] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#252525]"
+                              }`}
+                            >
+                              {p}
+                            </Button>
+                          )
+                        )}
                       </div>
+
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        onClick={() => setLeaderboardPage((p) => Math.min(totalLeaderboardPages, p + 1))}
+                        disabled={leaderboardPage === totalLeaderboardPages}
+                        className="h-7 px-2 text-xs gap-0.5 border-slate-200 dark:border-[#2C2C2E]"
+                      >
+                        <span className="text-[11px]">다음</span>
+                        <ChevronRight className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        onClick={() => setLeaderboardPage(totalLeaderboardPages)}
+                        disabled={leaderboardPage === totalLeaderboardPages}
+                        className="h-8 px-2 text-xs border-slate-200 dark:border-[#2C2C2E]"
+                        title="마지막 페이지"
+                      >
+                        <ChevronsRight className="h-3 w-3" />
+                      </Button>
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
       </main>
     </div>

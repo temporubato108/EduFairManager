@@ -229,7 +229,7 @@ export async function getStudentStampbookAction(eventId: string, studentId: stri
       booths: stampbookBooths,
       completedBoothIds,
       completedBoothTimes,
-      leaderboard: rankedLeaderboard.slice(0, 10), // Top 10 students
+      leaderboard: rankedLeaderboard.slice(0, 30), // Top 30 students
       myRank,
     };
 

@@ -41,7 +41,7 @@ export function SignupClientPage() {
             <School className="h-6 w-6" />
           </div>
           <CardTitle className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            학교 관리자 회원가입
+            학교 회원가입
           </CardTitle>
           <CardDescription className="text-xs text-slate-500 dark:text-[#98989D]">
             일반 교사와 학생은 별도 가입 없이 QR 코드로 즉시 참여할 수 있습니다.
@@ -59,9 +59,8 @@ export function SignupClientPage() {
 
             {/* 1. School Name Auto-complete Search */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                <span>학교명 검색</span>
-                <span className="text-[10px] text-slate-400 font-normal">타이핑 시 전국 학교 자동완성</span>
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                학교명
               </Label>
               <SchoolSearch
                 name="school_name"
@@ -76,9 +75,9 @@ export function SignupClientPage() {
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
                 <Label htmlFor="username" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  관리자 아이디
+                  아이디
                 </Label>
-                <span className="text-[10px] text-slate-400">4~20자 영문, 숫자, _ 허용 (한글 제외)</span>
+                <span className="text-[10px] text-slate-400">4~20자 영문, 숫자, _</span>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -88,7 +87,7 @@ export function SignupClientPage() {
                   id="username"
                   name="username"
                   type="text"
-                  placeholder="예: hanguk_admin 또는 korea2026"
+                  placeholder="아이디를 입력하세요"
                   value={username}
                   onChange={(e) => setUsername(e.target.value.toLowerCase().trim())}
                   required
@@ -162,7 +161,7 @@ export function SignupClientPage() {
               <div className="flex justify-between items-center">
                 <Label htmlFor="recovery_pin" className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <KeyRound className="h-3.5 w-3.5 text-indigo-500" />
-                  <span>비상 복구 4자리 숫자 PIN</span>
+                  <span>비상 복구 PIN</span>
                 </Label>
                 <span className="text-[10px] text-slate-400">숫자 4자리</span>
               </div>
@@ -201,7 +200,7 @@ export function SignupClientPage() {
                 </>
               ) : (
                 <>
-                  <span>학교 관리자 계정 생성하기</span>
+                  <span>학교 계정 생성하기</span>
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}

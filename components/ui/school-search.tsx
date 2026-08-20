@@ -99,7 +99,7 @@ export function SchoolSearch({
 
         <Input
           type="text"
-          placeholder="학교명을 입력하세요 (예: 한국초, 서울중)"
+          placeholder="학교명을 입력하세요"
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);

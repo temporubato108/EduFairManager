@@ -48,7 +48,7 @@ export default function LoginPage() {
             
             <div className="space-y-1.5">
               <Label htmlFor="identifier" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                관리자 아이디
+                아이디
               </Label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -116,13 +116,13 @@ export default function LoginPage() {
           {/* Signup Promotion Card Footer */}
           <div className="pt-3 border-t border-slate-100 dark:border-[#2C2C2E]/60 text-center space-y-2">
             <p className="text-xs text-slate-500 dark:text-[#98989D]">
-              처음 이용하시는 학교이신가요?
+              처음 이용하시나요?
             </p>
             <Link
               href="/signup"
               className="flex items-center justify-center w-full bg-indigo-50 hover:bg-indigo-100/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 font-extrabold h-11 rounded-xl text-xs gap-1.5 transition-all shadow-xs"
             >
-              <span>학교 관리자 무료 회원가입 (30초)</span>
+              <span>학교 계정 생성하기</span>
               <ArrowRight className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
             </Link>
           </div>

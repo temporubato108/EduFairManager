@@ -135,7 +135,7 @@ export async function getAdminDashboardDataAction(eventId: string) {
       }))
       .sort((a, b) => b.count - a.count);
 
-    // 6. Format recent participations (last 6 items)
+    // 6. Format recent participations (latest 20 items for scrollable feed)
     // Sort chronologically by actual scanned_at timestamp
     const sortedRecent = [...rows]
       .sort((a, b) => {
@@ -143,7 +143,7 @@ export async function getAdminDashboardDataAction(eventId: string) {
         const timeB = new Date(b.scanned_at || b.created_at || 0).getTime();
         return timeB - timeA;
       })
-      .slice(0, 6);
+      .slice(0, 20);
 
     const recentList = sortedRecent.map((r) => {
       const studentData = r.student as unknown as StudentJoined | null;

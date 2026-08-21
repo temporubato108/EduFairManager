@@ -372,21 +372,21 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
                 </CardHeader>
                 <CardContent className="p-6">
                   {dashboardData.popularBooths.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-10 text-slate-500 dark:text-[#98989D]">
+                    <div className="flex flex-col items-center justify-center h-[260px] text-slate-500 dark:text-[#98989D]">
                       <Award className="h-8 w-8 text-slate-300 dark:text-[#2C2C2E] mb-2" />
                       <p className="text-xs">집계된 참여 기록이 없습니다.</p>
                     </div>
                   ) : (
-                    <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
+                    <div className="h-[260px] overflow-y-auto pr-2 space-y-3.5">
                       {dashboardData.popularBooths.map((booth, idx) => {
                         const widthPct = maxBoothCount > 0 ? (booth.count / maxBoothCount) * 100 : 0;
                         return (
                           <div key={booth.boothId} className="space-y-1.5">
                             <div className="flex justify-between text-xs">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
                                 <span
                                   className={cn(
-                                    "flex h-5 w-5 items-center justify-center rounded-md text-[10px] font-bold",
+                                    "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md text-[10px] font-bold",
                                     idx === 0 && "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300",
                                     idx === 1 && "bg-slate-100 text-slate-800 dark:bg-[#2C2C2E] dark:text-slate-200",
                                     idx > 1 && "bg-slate-50 text-slate-500 dark:bg-[#121212] dark:text-slate-400"
@@ -394,10 +394,10 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
                                 >
                                   {idx + 1}
                                 </span>
-                                <span className="font-semibold text-slate-800 dark:text-white">{booth.name}</span>
-                                <span className="text-[10px] text-slate-400 font-medium">({booth.operatorName !== "미지정" ? booth.operatorName : "교사 미지정"})</span>
+                                <span className="font-semibold text-slate-800 dark:text-white truncate">{booth.name}</span>
+                                <span className="text-[10px] text-slate-400 font-medium truncate">({booth.operatorName !== "미지정" ? booth.operatorName : "교사 미지정"})</span>
                               </div>
-                              <span className="font-mono font-bold text-slate-700 dark:text-indigo-300">
+                              <span className="font-mono font-bold text-slate-700 dark:text-indigo-300 flex-shrink-0 pl-2">
                                 {booth.count}회
                               </span>
                             </div>
@@ -431,12 +431,12 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
                 </CardHeader>
                 <CardContent className="p-6">
                   {dashboardData.recentParticipations.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-10 text-slate-500 dark:text-[#98989D]">
+                    <div className="flex flex-col items-center justify-center h-[260px] text-slate-500 dark:text-[#98989D]">
                       <Clock className="h-8 w-8 text-slate-300 dark:text-[#2C2C2E] mb-2" />
                       <p className="text-xs">현재 생성되는 실시간 스캔 정보가 없습니다.</p>
                     </div>
                   ) : (
-                    <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
+                    <div className="h-[260px] overflow-y-auto pr-2 space-y-3">
                       {dashboardData.recentParticipations.map((item) => (
                         <div
                           key={item.id}

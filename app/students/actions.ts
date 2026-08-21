@@ -277,7 +277,7 @@ export async function updateStudentAction(id: string, data: Partial<StudentInput
 }
 
 /**
- * Soft delete a student
+ * Soft delete a single student
  */
 export async function deleteStudentAction(id: string) {
   const supabase = await createClient();
@@ -310,4 +310,37 @@ export async function deleteStudentAction(id: string) {
 
   revalidatePath("/students");
   return { success: true };
+}
+
+/**
+ * Soft delete multiple students at once
+ */
+export async function deleteStudentsBatchAction(ids: string[], eventId?: string) {
+  if (!ids || ids.length === 0) {
+    return { error: "삭제할 학생이 선택되지 않았습니다." };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "로그인이 필요합니다." };
+
+  const adminSupabase = createAdminClient();
+  const { error } = await adminSupabase
+    .from("students")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", ids);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const { recordLogAction } = await import("@/app/logs/actions");
+  await recordLogAction(
+    eventId || null,
+    "delete_students_batch",
+    `학생 일괄 삭제 완료: 총 ${ids.length}명 삭제 처리`
+  );
+
+  revalidatePath("/students");
+  return { success: true, count: ids.length };
 }

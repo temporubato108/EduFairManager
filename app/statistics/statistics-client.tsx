@@ -91,11 +91,20 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
 
   const PAGE_SIZE = 30;
 
-  // Set default event
+  // Set default event / preserve active event across pages
   useEffect(() => {
-    if (initialEvents.length > 0) {
-      setSelectedEventId(initialEvents[0].id);
-    }
+    if (initialEvents.length === 0) return;
+
+    setSelectedEventId((prev) => {
+      if (prev && initialEvents.some((e) => e.id === prev)) {
+        return prev;
+      }
+      const saved = typeof window !== "undefined" ? localStorage.getItem("edufair_active_event_id") : null;
+      if (saved && initialEvents.some((e) => e.id === saved)) {
+        return saved;
+      }
+      return initialEvents[0].id;
+    });
   }, [initialEvents]);
 
   // Reset pagination on query or event change
@@ -129,12 +138,18 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
 
   useEffect(() => {
     if (selectedEventId) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("edufair_active_event_id", selectedEventId);
+      }
       fetchStats(selectedEventId);
     }
   }, [selectedEventId, fetchStats]);
 
   const handleEventChange = (eventId: string) => {
     setSelectedEventId(eventId);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("edufair_active_event_id", eventId);
+    }
   };
 
   const getSelectedEventName = () => {

@@ -108,14 +108,31 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
   const [formDesc, setFormDesc] = useState("");
   const [formOperatorName, setFormOperatorName] = useState("");
 
-  // Load selected event's default preference on start
+  // Load selected event's default preference on start / preserve across revalidations
   useEffect(() => {
-    if (initialEvents.length > 0) {
-      const firstEventId = initialEvents[0].id;
-      setSelectedEventId(firstEventId);
-      loadBooths(firstEventId);
-    }
+    if (initialEvents.length === 0) return;
+
+    setSelectedEventId((prev) => {
+      if (prev && initialEvents.some((e) => e.id === prev)) {
+        return prev;
+      }
+      const saved = typeof window !== "undefined" ? localStorage.getItem("edufair_active_event_id") : null;
+      if (saved && initialEvents.some((e) => e.id === saved)) {
+        return saved;
+      }
+      return initialEvents[0].id;
+    });
   }, [initialEvents]);
+
+  // Load Booths whenever selectedEventId changes
+  useEffect(() => {
+    if (selectedEventId) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("edufair_active_event_id", selectedEventId);
+      }
+      loadBooths(selectedEventId);
+    }
+  }, [selectedEventId]);
 
   // Load Booths
   const loadBooths = (eventId: string) => {
@@ -150,7 +167,9 @@ export function BoothClientPage({ initialEvents, teachers }: BoothClientPageProp
   // Handle Event Filter Change
   const handleEventChange = (eventId: string) => {
     setSelectedEventId(eventId);
-    loadBooths(eventId);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("edufair_active_event_id", eventId);
+    }
   };
 
   // Reset Form

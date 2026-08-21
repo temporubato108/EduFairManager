@@ -45,11 +45,20 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<string>("");
 
-  // Select the first event by default
+  // Select the first event by default / preserve active event across pages
   useEffect(() => {
-    if (initialEvents.length > 0) {
-      setSelectedEventId(initialEvents[0].id);
-    }
+    if (initialEvents.length === 0) return;
+
+    setSelectedEventId((prev) => {
+      if (prev && initialEvents.some((e) => e.id === prev)) {
+        return prev;
+      }
+      const saved = typeof window !== "undefined" ? localStorage.getItem("edufair_active_event_id") : null;
+      if (saved && initialEvents.some((e) => e.id === saved)) {
+        return saved;
+      }
+      return initialEvents[0].id;
+    });
   }, [initialEvents]);
 
   // Fetch Dashboard Data function
@@ -75,6 +84,10 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
   // Realtime Supabase WebSockets + Page Visibility API + Fallback Polling (20s)
   useEffect(() => {
     if (!selectedEventId) return;
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("edufair_active_event_id", selectedEventId);
+    }
 
     // Initial fetch
     fetchDashboardData(selectedEventId, dashboardData === null);
@@ -131,6 +144,9 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
   const handleEventChange = (eventId: string) => {
     setSelectedEventId(eventId);
     setDashboardData(null); // Reset metrics for loading state
+    if (typeof window !== "undefined") {
+      localStorage.setItem("edufair_active_event_id", eventId);
+    }
   };
 
   const handleManualRefresh = () => {

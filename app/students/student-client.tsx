@@ -51,6 +51,8 @@ import {
   ExternalLink,
   Copy,
   Check,
+  CheckSquare,
+  Square,
   UserPlus,
   Sparkles,
   Wand2,
@@ -65,6 +67,7 @@ import {
   createStudentAction,
   updateStudentAction,
   deleteStudentAction,
+  deleteStudentsBatchAction,
   importStudentsAction,
   Student,
   StudentInput,
@@ -232,19 +235,41 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
   const [parsedCount, setParsedCount] = useState<number | null>(null);
   const [parsedData, setParsedData] = useState<StudentInput[]>([]);
 
+  // Checkbox Batch Selection State
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+
   // Reset pagination on class or event change
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedStudentIds(new Set());
   }, [selectedClass, selectedEventId]);
 
-  // Load selected event's default preference on start & load settings if missing
+  // Load selected event's default preference on start / preserve across revalidations
   useEffect(() => {
-    if (initialEvents.length > 0) {
-      const firstEventId = initialEvents[0].id;
-      setSelectedEventId(firstEventId);
-      loadStudents(firstEventId);
-    }
+    if (initialEvents.length === 0) return;
+
+    setSelectedEventId((prev) => {
+      if (prev && initialEvents.some((e) => e.id === prev)) {
+        return prev;
+      }
+      const saved = typeof window !== "undefined" ? localStorage.getItem("edufair_active_event_id") : null;
+      if (saved && initialEvents.some((e) => e.id === saved)) {
+        return saved;
+      }
+      return initialEvents[0].id;
+    });
   }, [initialEvents]);
+
+  // Load students whenever selectedEventId changes
+  useEffect(() => {
+    if (selectedEventId) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("edufair_active_event_id", selectedEventId);
+      }
+      setSelectedStudentIds(new Set());
+      loadStudents(selectedEventId);
+    }
+  }, [selectedEventId]);
 
   useEffect(() => {
     if (!schoolLogo) {
@@ -449,7 +474,63 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
   const handleEventChange = (eventId: string) => {
     setSelectedEventId(eventId);
     setSelectedClass("ALL");
-    loadStudents(eventId);
+    setSelectedStudentIds(new Set());
+    if (typeof window !== "undefined") {
+      localStorage.setItem("edufair_active_event_id", eventId);
+    }
+  };
+
+  // Checkbox Batch Selection Helpers
+  const toggleSelectStudent = (id: string) => {
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllCurrentPage = (pageStudentIds: string[]) => {
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev);
+      const allSelected = pageStudentIds.length > 0 && pageStudentIds.every((id) => next.has(id));
+      if (allSelected) {
+        pageStudentIds.forEach((id) => next.delete(id));
+      } else {
+        pageStudentIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedStudentIds(new Set(filteredStudents.map((s) => s.id)));
+  };
+
+  // Handle Batch Delete
+  const handleBatchDelete = () => {
+    if (selectedStudentIds.size === 0) return;
+    const count = selectedStudentIds.size;
+    if (
+      !confirm(
+        `정말 선택한 ${count}명의 학생을 일괄 삭제하시겠습니까?\n삭제된 학생의 참여 이력 및 대장 기록이 유실될 수 있습니다.`
+      )
+    ) {
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await deleteStudentsBatchAction(Array.from(selectedStudentIds), selectedEventId);
+      if (res.error) {
+        alert(`일괄 삭제 실패: ${res.error}`);
+      } else {
+        setSelectedStudentIds(new Set());
+        loadStudents(selectedEventId);
+      }
+    });
   };
 
   // Reset Edit Form
@@ -496,6 +577,11 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
       if (res.error) {
         alert(`삭제 실패: ${res.error}`);
       } else {
+        setSelectedStudentIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
         loadStudents(selectedEventId);
       }
     });
@@ -1425,34 +1511,95 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
 
               return (
                 <>
+                  {/* Batch Action Toolbar */}
+                  {selectedStudentIds.size > 0 && (
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-indigo-50/90 dark:bg-indigo-950/60 border-b border-indigo-200 dark:border-indigo-800/60 p-3 sm:px-5 animate-fade-in">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-indigo-900 dark:text-indigo-200">
+                        <CheckSquare className="h-4 w-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                        <span><strong>{selectedStudentIds.size}명</strong>의 학생이 선택되었습니다.</span>
+                        {selectedStudentIds.size < filteredStudents.length && (
+                          <button
+                            type="button"
+                            onClick={handleSelectAllFiltered}
+                            className="underline text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 ml-1 text-xs font-bold"
+                          >
+                            (전체 {filteredStudents.length}명 모두 선택)
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => setSelectedStudentIds(new Set())}
+                          className="text-xs text-slate-600 hover:text-slate-900 dark:text-slate-300 h-8 px-2.5"
+                        >
+                          선택 해제
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="destructive"
+                          onClick={handleBatchDelete}
+                          disabled={isPending}
+                          className="bg-rose-600 hover:bg-rose-700 text-white font-bold gap-1.5 h-8 px-3"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>선택 학생 일괄 삭제 ({selectedStudentIds.size}명)</span>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   <Table>
                     <TableHeader className="border-slate-200 dark:border-[#2C2C2E]">
                       <TableRow className="hover:bg-transparent border-slate-200 dark:border-[#2C2C2E]">
-                        <TableHead className="w-[35%]">학반정보 (학번)</TableHead>
-                        <TableHead className="w-[30%]">이름</TableHead>
+                        <TableHead className="w-[44px] px-3">
+                          <input
+                            type="checkbox"
+                            checked={paginatedStudents.length > 0 && paginatedStudents.every((s) => selectedStudentIds.has(s.id))}
+                            onChange={() => toggleSelectAllCurrentPage(paginatedStudents.map((s) => s.id))}
+                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600 align-middle"
+                            title="현재 페이지 전체 선택/해제"
+                          />
+                        </TableHead>
+                        <TableHead className="w-[32%]">학반정보 (학번)</TableHead>
+                        <TableHead className="w-[28%]">이름</TableHead>
                         <TableHead className="w-[25%]">학생 QR</TableHead>
                         <TableHead className="w-[10%] text-right"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedStudents.map((student) => (
-                        <TableRow
-                          key={student.id}
-                          className="border-slate-100 hover:bg-slate-50/50 dark:border-[#2C2C2E] dark:hover:bg-[#252525]"
-                        >
-                          <TableCell className="font-mono font-semibold text-slate-800 dark:text-white">
-                            {student.student_number}
-                          </TableCell>
-                          <TableCell className="text-slate-800 dark:text-white font-medium">
-                            {student.name}
-                          </TableCell>
-                          <TableCell>
-                            <StudentQrThumbnail
-                              code={student.qr_code}
-                              onClick={() => setViewingQrStudent(student)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
+                      {paginatedStudents.map((student) => {
+                        const isSelected = selectedStudentIds.has(student.id);
+                        return (
+                          <TableRow
+                            key={student.id}
+                            className={cn(
+                              "border-slate-100 hover:bg-slate-50/50 dark:border-[#2C2C2E] dark:hover:bg-[#252525] transition-colors",
+                              isSelected && "bg-indigo-50/40 dark:bg-indigo-950/20"
+                            )}
+                          >
+                            <TableCell className="w-[44px] px-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelectStudent(student.id)}
+                                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600 align-middle"
+                              />
+                            </TableCell>
+                            <TableCell className="font-mono font-semibold text-slate-800 dark:text-white">
+                              {student.student_number}
+                            </TableCell>
+                            <TableCell className="text-slate-800 dark:text-white font-medium">
+                              {student.name}
+                            </TableCell>
+                            <TableCell>
+                              <StudentQrThumbnail
+                                code={student.qr_code}
+                                onClick={() => setViewingQrStudent(student)}
+                              />
+                            </TableCell>
+                            <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger render={
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 dark:text-[#98989D]">
@@ -1473,9 +1620,10 @@ export function StudentClientPage({ initialEvents, initialSchoolLogo }: StudentC
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
 

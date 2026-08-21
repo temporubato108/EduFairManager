@@ -405,17 +405,37 @@ export function StatisticsClientPage({ initialEvents }: StatisticsClientPageProp
                 <div className="grid gap-6 md:grid-cols-2">
                   <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
                     <CardHeader>
-                      <CardTitle className="text-sm font-bold text-slate-800 dark:text-white">부스별 참여도 비교 (부스별 개별 색상)</CardTitle>
+                      <CardTitle className="text-sm font-bold text-slate-800 dark:text-white">부스별 참여도</CardTitle>
                     </CardHeader>
                     <CardContent>
                       {isMounted ? (
                         <div className="w-full h-80">
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={sortedBoothStatsForChart.slice(0, 8)}>
-                              <XAxis dataKey="name" stroke="#98989D" fontSize={10} tickLine={false} />
+                            <BarChart
+                              data={sortedBoothStatsForChart.slice(0, 8)}
+                              margin={{ top: 10, right: 10, left: -10, bottom: 25 }}
+                            >
+                              <XAxis
+                                dataKey="name"
+                                stroke="#98989D"
+                                fontSize={10}
+                                tickLine={false}
+                                interval={0}
+                                angle={-35}
+                                textAnchor="end"
+                                height={50}
+                                tickFormatter={(val: string) =>
+                                  val && val.length > 7 ? `${val.slice(0, 7)}...` : val
+                                }
+                              />
                               <YAxis stroke="#98989D" fontSize={10} tickLine={false} />
                               <Tooltip
-                                contentStyle={{ backgroundColor: "#1E1E1E", borderColor: "#2C2C2E", color: "#FFF", borderRadius: "8px" }}
+                                contentStyle={{
+                                  backgroundColor: "#1E1E1E",
+                                  borderColor: "#2C2C2E",
+                                  color: "#FFF",
+                                  borderRadius: "8px",
+                                }}
                               />
                               <Bar dataKey="count" radius={[6, 6, 0, 0]} name="스캔수">
                                 {sortedBoothStatsForChart.slice(0, 8).map((entry, index) => (

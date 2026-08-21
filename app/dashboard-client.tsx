@@ -364,7 +364,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
                 <CardHeader className="border-b border-slate-100 dark:border-[#2C2C2E] pb-3">
                   <div className="flex items-center gap-2">
                     <Award className="h-4.5 w-4.5 text-amber-500" />
-                    <CardTitle className="text-base font-bold text-slate-800 dark:text-white">인기 부스 순위 (Top 5)</CardTitle>
+                    <CardTitle className="text-base font-bold text-slate-800 dark:text-white">인기 부스 순위</CardTitle>
                   </div>
                   <CardDescription className="text-xs text-slate-400">
                     부스별 누적 스탬프 횟수가 많은 순서입니다.
@@ -377,7 +377,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
                       <p className="text-xs">집계된 참여 기록이 없습니다.</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
                       {dashboardData.popularBooths.map((booth, idx) => {
                         const widthPct = maxBoothCount > 0 ? (booth.count / maxBoothCount) * 100 : 0;
                         return (
@@ -436,7 +436,7 @@ export function DashboardClientPage({ initialEvents }: DashboardClientPageProps)
                       <p className="text-xs">현재 생성되는 실시간 스캔 정보가 없습니다.</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
                       {dashboardData.recentParticipations.map((item) => (
                         <div
                           key={item.id}

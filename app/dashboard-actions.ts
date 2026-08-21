@@ -94,8 +94,23 @@ export async function getAdminDashboardDataAction(eventId: string) {
     const avgParticipation =
       totalStudentsNum > 0 ? Number((totalPCount / totalStudentsNum).toFixed(1)) : 0;
 
-    // 5. Aggregate popular booths
+    // 5. Aggregate all booths ranking for this event
+    const { data: allBooths } = await supabase
+      .from("booths")
+      .select("id, name, description, operator:teachers(name)")
+      .eq("event_id", eventId)
+      .is("deleted_at", null);
+
     const boothMap: Record<string, { name: string; operatorName: string; count: number }> = {};
+    (allBooths || []).forEach((b) => {
+      const parsedBooth = parseBoothOperator(b as unknown as BoothJoined);
+      boothMap[b.id] = {
+        name: b.name || "부스",
+        operatorName: parsedBooth.operator_name || "미지정",
+        count: 0,
+      };
+    });
+
     rows.forEach((p) => {
       const bId = p.booth_id;
       if (!bId) return;
@@ -118,8 +133,7 @@ export async function getAdminDashboardDataAction(eventId: string) {
         operatorName: item.operatorName,
         count: item.count,
       }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+      .sort((a, b) => b.count - a.count);
 
     // 6. Format recent participations (last 6 items)
     // Sort chronologically by actual scanned_at timestamp

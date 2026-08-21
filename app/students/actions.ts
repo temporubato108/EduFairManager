@@ -171,20 +171,41 @@ export async function createStudentAction(eventId: string, data: StudentInput) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "로그인이 필요합니다." };
+
+  const adminSupabase = createAdminClient();
+  const trimmedNumber = data.student_number?.trim();
+
+  // 1. Purge any soft-deleted records with this student number or generally in this event
+  await adminSupabase
+    .from("students")
+    .delete()
+    .eq("event_id", eventId)
+    .not("deleted_at", "is", null);
+
+  // 2. Check if an active student with this student number already exists
+  const { data: existingActive } = await adminSupabase
+    .from("students")
+    .select("id, name, student_number")
+    .eq("event_id", eventId)
+    .eq("student_number", trimmedNumber)
+    .maybeSingle();
+
+  if (existingActive) {
+    return { error: `이미 등록되어 있는 학번입니다: ${trimmedNumber} (${existingActive.name})` };
+  }
   
   // Generate student ID and QR Code payload
   const studentId = crypto.randomUUID();
   const qrCode = `${eventId}:${studentId}`;
 
-  const adminSupabase = createAdminClient();
   const { data: newStudent, error } = await adminSupabase
     .from("students")
     .insert([
       {
         id: studentId,
         event_id: eventId,
-        student_number: data.student_number,
-        name: data.name,
+        student_number: trimmedNumber,
+        name: data.name.trim(),
         qr_code: qrCode,
       },
     ])
@@ -192,6 +213,9 @@ export async function createStudentAction(eventId: string, data: StudentInput) {
     .single();
 
   if (error) {
+    if (error.message.includes("unique_student_number_per_event")) {
+      return { error: `이미 등록된 학번입니다: ${trimmedNumber}` };
+    }
     return { error: error.message };
   }
 
@@ -203,7 +227,7 @@ export async function createStudentAction(eventId: string, data: StudentInput) {
 }
 
 /**
- * Bulk import students from Excel file
+ * Bulk import students from Excel file or batch registration
  */
 export async function importStudentsAction(eventId: string, studentsList: StudentInput[]) {
   if (!studentsList || studentsList.length === 0) {
@@ -214,36 +238,77 @@ export async function importStudentsAction(eventId: string, studentsList: Studen
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "로그인이 필요합니다." };
 
-  // Map students to database record schema
+  const adminSupabase = createAdminClient();
+
+  // 1. Purge any soft-deleted records for this event so they never cause unique constraint collisions
+  await adminSupabase
+    .from("students")
+    .delete()
+    .eq("event_id", eventId)
+    .not("deleted_at", "is", null);
+
+  // 2. Validate for duplicates within the uploaded list itself
+  const duplicatesInList: string[] = [];
+  const seenNumbers = new Set<string>();
+  for (const s of studentsList) {
+    const num = s.student_number?.trim();
+    if (!num) continue;
+    if (seenNumbers.has(num)) {
+      duplicatesInList.push(num);
+    }
+    seenNumbers.add(num);
+  }
+
+  if (duplicatesInList.length > 0) {
+    const uniqueDups = Array.from(new Set(duplicatesInList));
+    return {
+      error: `업로드할 목록 내에 중복된 학번이 존재합니다: ${uniqueDups.slice(0, 5).join(", ")}${uniqueDups.length > 5 ? " 외 다수" : ""}`,
+    };
+  }
+
+  // 3. Check for collisions against existing active students in this event
+  const inputNumbers = Array.from(seenNumbers);
+  const { data: existingActive } = await adminSupabase
+    .from("students")
+    .select("student_number, name")
+    .eq("event_id", eventId)
+    .in("student_number", inputNumbers);
+
+  if (existingActive && existingActive.length > 0) {
+    const conflictList = existingActive.map((s) => `${s.student_number} (${s.name})`);
+    return {
+      error: `이미 행사에 등록되어 있는 학번입니다: ${conflictList.slice(0, 5).join(", ")}${conflictList.length > 5 ? " 외 다수" : ""}`,
+    };
+  }
+
+  // 4. Map students to database record schema
   const records = studentsList.map((student) => {
     const studentId = crypto.randomUUID();
     const qrCode = `${eventId}:${studentId}`;
     return {
       id: studentId,
       event_id: eventId,
-      student_number: student.student_number,
-      name: student.name,
+      student_number: student.student_number.trim(),
+      name: student.name.trim(),
       qr_code: qrCode,
     };
   });
 
-  const adminSupabase = createAdminClient();
-  // Bulk Insert
+  // 5. Bulk Insert
   const { data, error } = await adminSupabase
     .from("students")
     .insert(records)
     .select();
 
   if (error) {
-    // Check for duplicate student number key constraint error
     if (error.message.includes("unique_student_number_per_event")) {
-      return { error: "중복된 학번이 존재합니다. 엑셀 파일을 다시 확인해주세요." };
+      return { error: "중복된 학번이 존재합니다. 학생 목록을 다시 확인해주세요." };
     }
     return { error: error.message };
   }
 
   const { recordLogAction } = await import("@/app/logs/actions");
-  await recordLogAction(eventId, "import_students", `학생 Excel 일괄 업로드 완료: 총 ${data?.length || 0}명 등록`);
+  await recordLogAction(eventId, "import_students", `학생 일괄 업로드 완료: 총 ${data?.length || 0}명 등록`);
 
   revalidatePath("/students");
   return { success: true, count: data?.length || 0 };
@@ -266,6 +331,9 @@ export async function updateStudentAction(id: string, data: Partial<StudentInput
     .single();
 
   if (error) {
+    if (error.message.includes("unique_student_number_per_event")) {
+      return { error: "이미 다른 학생에게 사용 중인 학번입니다." };
+    }
     return { error: error.message };
   }
 
@@ -277,24 +345,31 @@ export async function updateStudentAction(id: string, data: Partial<StudentInput
 }
 
 /**
- * Soft delete a single student
+ * Permanently delete a single student
  */
 export async function deleteStudentAction(id: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "로그인이 필요합니다." };
 
-  // Fetch details before soft delete to record event_id, name, and student_number in logs
-  const { data: targetStudent } = await supabase
+  const adminSupabase = createAdminClient();
+
+  // Fetch details before delete to record event_id, name, and student_number in logs
+  const { data: targetStudent } = await adminSupabase
     .from("students")
     .select("event_id, name, student_number")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
-  const adminSupabase = createAdminClient();
+  // Delete associated participations first
+  await adminSupabase
+    .from("participations")
+    .delete()
+    .eq("student_id", id);
+
   const { error } = await adminSupabase
     .from("students")
-    .update({ deleted_at: new Date().toISOString() })
+    .delete()
     .eq("id", id);
 
   if (error) {
@@ -313,7 +388,7 @@ export async function deleteStudentAction(id: string) {
 }
 
 /**
- * Soft delete multiple students at once
+ * Permanently delete multiple students at once
  */
 export async function deleteStudentsBatchAction(ids: string[], eventId?: string) {
   if (!ids || ids.length === 0) {
@@ -325,9 +400,16 @@ export async function deleteStudentsBatchAction(ids: string[], eventId?: string)
   if (!user) return { error: "로그인이 필요합니다." };
 
   const adminSupabase = createAdminClient();
+
+  // Delete associated participations first
+  await adminSupabase
+    .from("participations")
+    .delete()
+    .in("student_id", ids);
+
   const { error } = await adminSupabase
     .from("students")
-    .update({ deleted_at: new Date().toISOString() })
+    .delete()
     .in("id", ids);
 
   if (error) {

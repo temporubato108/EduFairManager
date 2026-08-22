@@ -43,7 +43,6 @@ export async function recordLogAction(
     const authClient = await createClient();
     const adminClient = createAdminClient();
 
-    // Get current logged-in user profile id if available
     let currentUserId: string | null = explicitUserId || null;
     if (!currentUserId) {
       try {
@@ -61,17 +60,10 @@ export async function recordLogAction(
       details: typeof details === "string" ? details : JSON.stringify(details),
     };
 
-    // Try inserting with user_id & action first (standard schema in supabase_schema.sql)
-    const { error: err1 } = await adminClient.from("logs").insert(payload);
-
-    if (err1) {
-      // Fallback insert for operator_id & action_type if custom column schema exists
-      await adminClient.from("logs").insert({
-        event_id: eventId || null,
-        operator_id: currentUserId,
-        action_type: actionType,
-        details: typeof details === "string" ? details : JSON.stringify(details),
-      });
+    const { error } = await adminClient.from("logs").insert(payload);
+    if (error) {
+      console.error("Log recording error:", error.message);
+      return { success: false, error: error.message };
     }
 
     return { success: true };
@@ -102,18 +94,17 @@ export async function getLogsAction(
     const userEvents = await getEventsAction();
     const userEventIds = userEvents.map((e) => e.id);
 
-    // 2. Query logs using adminSupabase to prevent join / RLS errors
+    // 2. Query logs using adminSupabase with exact database columns
     let query = adminSupabase
       .from("logs")
-      .select("id, event_id, operator_id, user_id, action_type, action, details, created_at");
+      .select("id, event_id, user_id, action, details, created_at");
 
-    // Strictly enforce multi-tenant isolation:
+    // Multi-tenant isolation:
     // A user can ONLY see:
-    // - Logs where user_id = user.id OR operator_id = user.id (their own actions)
+    // - Logs where user_id = user.id (actions they performed)
     // - OR logs where event_id is one of their own events (userEventIds)
     if (eventId === "null") {
-      query = query.is("event_id", null);
-      query = query.or(`user_id.eq.${user.id},operator_id.eq.${user.id}`);
+      query = query.is("event_id", null).eq("user_id", user.id);
     } else if (eventId !== "all" && eventId) {
       // Specific event selected: MUST belong to this user
       if (!userEventIds.includes(eventId)) {
@@ -123,15 +114,15 @@ export async function getLogsAction(
     } else {
       // eventId === "all"
       if (userEventIds.length > 0) {
-        query = query.or(`event_id.in.(${userEventIds.join(",")}),user_id.eq.${user.id},operator_id.eq.${user.id}`);
+        query = query.or(`event_id.in.(${userEventIds.join(",")}),user_id.eq.${user.id}`);
       } else {
-        query = query.or(`user_id.eq.${user.id},operator_id.eq.${user.id}`);
+        query = query.eq("user_id", user.id);
       }
     }
 
     // Action Type Filter
     if (actionType !== "all" && actionType) {
-      query = query.or(`action_type.eq.${actionType},action.eq.${actionType}`);
+      query = query.eq("action", actionType);
     }
 
     // Keyword Search on details
@@ -144,16 +135,23 @@ export async function getLogsAction(
 
     if (error) {
       console.error("Logs query error:", error.message);
-      return { success: true, data: [] };
+      return { success: false, error: error.message };
     }
 
-    const logList = (rows || []) as unknown as LogRow[];
+    const logList = (rows || []) as unknown as {
+      id: string;
+      event_id: string | null;
+      user_id: string | null;
+      action: string;
+      details: unknown;
+      created_at: string;
+    }[];
 
-    // 3. Collect unique operator / user IDs to map names & emails safely in memory
+    // 3. Collect unique user IDs to map names & emails safely in memory
     const userIds = Array.from(
       new Set(
         logList
-          .map((r) => r.user_id || r.operator_id)
+          .map((r) => r.user_id)
           .filter((id): id is string => Boolean(id))
       )
     );
@@ -175,7 +173,7 @@ export async function getLogsAction(
     const currentUserEmail = user.email || "";
 
     const logs: LogEntry[] = logList.map((r) => {
-      const opId = r.user_id || r.operator_id || null;
+      const opId = r.user_id || null;
       let opName = "시스템/자동";
       let opEmail = "";
 
@@ -198,7 +196,7 @@ export async function getLogsAction(
         id: r.id,
         eventId: r.event_id,
         operatorId: opId,
-        actionType: r.action_type || r.action || "LOG",
+        actionType: r.action || "LOG",
         details: detailText,
         createdAt: r.created_at,
         operatorName: opName,

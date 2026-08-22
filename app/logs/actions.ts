@@ -33,34 +33,43 @@ interface LogRow {
 /**
  * Write a new audit log record safely (never throws or blocks calling actions)
  */
-export async function recordLogAction(eventId: string | null, actionType: string, details: string) {
+export async function recordLogAction(
+  eventId: string | null,
+  actionType: string,
+  details: string,
+  explicitUserId?: string | null
+) {
   try {
     const authClient = await createClient();
     const adminClient = createAdminClient();
 
     // Get current logged-in user profile id if available
-    let currentUserId: string | null = null;
-    try {
-      const { data: { user } } = await authClient.auth.getUser();
-      currentUserId = user ? user.id : null;
-    } catch {
-      // unauthenticated
+    let currentUserId: string | null = explicitUserId || null;
+    if (!currentUserId) {
+      try {
+        const { data: { user } } = await authClient.auth.getUser();
+        currentUserId = user ? user.id : null;
+      } catch {
+        // unauthenticated
+      }
     }
 
-    // Try inserting with operator_id & action_type first
-    const { error: err1 } = await adminClient.from("logs").insert({
-      event_id: eventId,
-      operator_id: currentUserId,
-      action_type: actionType,
-      details: details,
-    });
+    const payload = {
+      event_id: eventId || null,
+      user_id: currentUserId,
+      action: actionType,
+      details: typeof details === "string" ? details : JSON.stringify(details),
+    };
+
+    // Try inserting with user_id & action first (standard schema in supabase_schema.sql)
+    const { error: err1 } = await adminClient.from("logs").insert(payload);
 
     if (err1) {
-      // Fallback insert for user_id & action column names
+      // Fallback insert for operator_id & action_type if custom column schema exists
       await adminClient.from("logs").insert({
-        event_id: eventId,
-        user_id: currentUserId,
-        action: actionType,
+        event_id: eventId || null,
+        operator_id: currentUserId,
+        action_type: actionType,
         details: typeof details === "string" ? details : JSON.stringify(details),
       });
     }
@@ -74,7 +83,7 @@ export async function recordLogAction(eventId: string | null, actionType: string
 }
 
 /**
- * Retrieve log records based on event, action type, and search queries
+ * Retrieve log records based on event, action type, and search queries strictly isolated to the logged-in user
  */
 export async function getLogsAction(
   eventId: string | "all" | "null",
@@ -86,26 +95,37 @@ export async function getLogsAction(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: true, data: [] };
 
+    const adminSupabase = createAdminClient();
+
+    // 1. Fetch user's own events to determine accessible event IDs
     const { getEventsAction } = await import("@/app/events/actions");
     const userEvents = await getEventsAction();
     const userEventIds = userEvents.map((e) => e.id);
 
-    let query = supabase
+    // 2. Query logs using adminSupabase to prevent join / RLS errors
+    let query = adminSupabase
       .from("logs")
-      .select("id, event_id, operator_id, user_id, action_type, action, details, created_at, operator:teachers(name, email)");
+      .select("id, event_id, operator_id, user_id, action_type, action, details, created_at");
 
-    // Event Filter
+    // Strictly enforce multi-tenant isolation:
+    // A user can ONLY see:
+    // - Logs where user_id = user.id OR operator_id = user.id (their own actions)
+    // - OR logs where event_id is one of their own events (userEventIds)
     if (eventId === "null") {
       query = query.is("event_id", null);
-      query = query.or(`operator_id.eq.${user.id},user_id.eq.${user.id}`);
+      query = query.or(`user_id.eq.${user.id},operator_id.eq.${user.id}`);
     } else if (eventId !== "all" && eventId) {
+      // Specific event selected: MUST belong to this user
+      if (!userEventIds.includes(eventId)) {
+        return { success: true, data: [] };
+      }
       query = query.eq("event_id", eventId);
     } else {
       // eventId === "all"
       if (userEventIds.length > 0) {
-        query = query.or(`event_id.in.(${userEventIds.join(",")}),operator_id.eq.${user.id},user_id.eq.${user.id}`);
+        query = query.or(`event_id.in.(${userEventIds.join(",")}),user_id.eq.${user.id},operator_id.eq.${user.id}`);
       } else {
-        query = query.or(`operator_id.eq.${user.id},user_id.eq.${user.id}`);
+        query = query.or(`user_id.eq.${user.id},operator_id.eq.${user.id}`);
       }
     }
 
@@ -120,45 +140,69 @@ export async function getLogsAction(
     }
 
     // Sort by newest first
-    const { data, error } = await query.order("created_at", { ascending: false }).limit(200);
+    const { data: rows, error } = await query.order("created_at", { ascending: false }).limit(300);
 
     if (error) {
-      // Fallback simpler query if join or or condition fails
-      const { data: fallbackData } = await supabase
-        .from("logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(200);
-      
-      const rows = (fallbackData || []) as unknown as LogRow[];
-      return {
-        success: true,
-        data: rows.map((r) => ({
-          id: r.id,
-          eventId: r.event_id,
-          operatorId: r.operator_id || r.user_id || null,
-          actionType: r.action_type || r.action || "LOG",
-          details: r.details || "",
-          createdAt: r.created_at,
-          operatorName: "시스템/자동",
-          operatorEmail: "",
-        })),
-      };
+      console.error("Logs query error:", error.message);
+      return { success: true, data: [] };
     }
 
-    const rows = (data || []) as unknown as LogRow[];
+    const logList = (rows || []) as unknown as LogRow[];
 
-    const logs: LogEntry[] = rows.map((r) => {
-      const operatorData = r.operator as unknown as TeacherJoined | null;
+    // 3. Collect unique operator / user IDs to map names & emails safely in memory
+    const userIds = Array.from(
+      new Set(
+        logList
+          .map((r) => r.user_id || r.operator_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+
+    const teacherMap: Record<string, { name: string; email: string }> = {};
+
+    if (userIds.length > 0) {
+      const { data: teacherProfiles } = await adminSupabase
+        .from("teachers")
+        .select("id, name, email")
+        .in("id", userIds);
+
+      (teacherProfiles || []).forEach((t) => {
+        teacherMap[t.id] = { name: t.name, email: t.email };
+      });
+    }
+
+    const currentUserName = user.user_metadata?.name || user.email?.split("@")[0] || "관리자";
+    const currentUserEmail = user.email || "";
+
+    const logs: LogEntry[] = logList.map((r) => {
+      const opId = r.user_id || r.operator_id || null;
+      let opName = "시스템/자동";
+      let opEmail = "";
+
+      if (opId && teacherMap[opId]) {
+        opName = teacherMap[opId].name;
+        opEmail = teacherMap[opId].email;
+      } else if (opId === user.id) {
+        opName = currentUserName;
+        opEmail = currentUserEmail;
+      }
+
+      let detailText = "";
+      if (typeof r.details === "string") {
+        detailText = r.details;
+      } else if (r.details) {
+        detailText = JSON.stringify(r.details);
+      }
+
       return {
         id: r.id,
         eventId: r.event_id,
-        operatorId: r.operator_id || r.user_id || null,
+        operatorId: opId,
         actionType: r.action_type || r.action || "LOG",
-        details: r.details || "",
+        details: detailText,
         createdAt: r.created_at,
-        operatorName: operatorData ? operatorData.name : "시스템/자동",
-        operatorEmail: operatorData ? operatorData.email : "",
+        operatorName: opName,
+        operatorEmail: opEmail,
       };
     });
 

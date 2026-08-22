@@ -123,7 +123,12 @@ export async function signupAction(
 
     // 5. Log creation
     const { recordLogAction } = await import("@/app/logs/actions");
-    await recordLogAction(null, "signup", `신규 학교 가입 완료: 학교명='${schoolName}', 아이디='${username}', 지역='${region}'`);
+    await recordLogAction(
+      null,
+      "signup",
+      `신규 학교 가입 완료: 학교명='${schoolName}', 아이디='${username}', 지역='${region}'`,
+      createdUserData?.user?.id
+    );
 
   } catch (err) {
     const errorObj = err as Error;

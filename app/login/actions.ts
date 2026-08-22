@@ -85,7 +85,7 @@ export async function loginAction(
   // We can import at the top of the file, or use inline import to avoid circular dependencies.
   // Since we don't import auth inside logs, there's no circle. Let's import at top.
   const { recordLogAction } = await import("@/app/logs/actions");
-  await recordLogAction(null, "login", `사용자 로그인 완료: 식별자='${matchedEmail}', 권한='${role}'`);
+  await recordLogAction(null, "login", `사용자 로그인 완료: 식별자='${matchedEmail}', 권한='${role}'`, authData.user?.id);
   
   if (role === "admin") {
     redirect("/");

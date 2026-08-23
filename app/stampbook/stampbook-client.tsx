@@ -591,7 +591,7 @@ export function StudentStampbookClientPage() {
                           <span className="text-[9px] text-slate-500">개</span>
                           {stampbook.event.allow_double_participation && (
                             <span className="text-xs font-bold text-black dark:text-white ml-2 font-sans">
-                              부스 {item.uniqueBoothCount}개 참여
+                              {item.totalScans}회 참여
                             </span>
                           )}
                         </div>

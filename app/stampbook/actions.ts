@@ -28,6 +28,7 @@ export interface LeaderboardEntry {
   studentNumber: string;
   completedCount: number;
   uniqueBoothCount: number;
+  totalScans: number;
   rank: number;
 }
 
@@ -196,18 +197,25 @@ export async function getStudentStampbookAction(eventId: string, studentId: stri
 
     const isDoubleAllowed = Boolean(event.allow_double_participation);
 
-    const leaderboardList = studentList.map((s) => ({
-      studentId: s.id,
-      name: s.name,
-      studentNumber: s.studentNumber,
-      completedCount: isDoubleAllowed ? studentTotalScans[s.id] : studentCompletionCounts[s.id].size,
-      uniqueBoothCount: studentCompletionCounts[s.id].size,
-    }));
+    const leaderboardList = studentList.map((s) => {
+      const uniqueCount = studentCompletionCounts[s.id].size;
+      const totalScans = studentTotalScans[s.id] || 0;
+      return {
+        studentId: s.id,
+        name: s.name,
+        studentNumber: s.studentNumber,
+        completedCount: uniqueCount,
+        uniqueBoothCount: uniqueCount,
+        totalScans: totalScans,
+      };
+    });
 
-    // Sort descending by count, then sort ascending by class number and name
+    // Sort descending by totalScans (or unique booths), then uniqueBoothCount, then class number and name
     leaderboardList.sort((a, b) => {
-      if (b.completedCount !== a.completedCount) {
-        return b.completedCount - a.completedCount;
+      const metricA = isDoubleAllowed ? a.totalScans : a.completedCount;
+      const metricB = isDoubleAllowed ? b.totalScans : b.completedCount;
+      if (metricB !== metricA) {
+        return metricB - metricA;
       }
       if (b.uniqueBoothCount !== a.uniqueBoothCount) {
         return b.uniqueBoothCount - a.uniqueBoothCount;
@@ -217,11 +225,12 @@ export async function getStudentStampbookAction(eventId: string, studentId: stri
 
     // Assign Ranks (handling ties)
     let currentRank = 1;
-    let prevCount = -1;
+    let prevScore = -1;
     const rankedLeaderboard: LeaderboardEntry[] = leaderboardList.map((item, idx) => {
-      if (item.completedCount !== prevCount) {
+      const currentScore = isDoubleAllowed ? item.totalScans : item.completedCount;
+      if (currentScore !== prevScore) {
         currentRank = idx + 1;
-        prevCount = item.completedCount;
+        prevScore = currentScore;
       }
       return {
         studentId: item.studentId,
@@ -229,6 +238,7 @@ export async function getStudentStampbookAction(eventId: string, studentId: stri
         studentNumber: item.studentNumber,
         completedCount: item.completedCount,
         uniqueBoothCount: item.uniqueBoothCount,
+        totalScans: item.totalScans,
         rank: currentRank,
       };
     });

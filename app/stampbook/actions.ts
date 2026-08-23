@@ -210,27 +210,30 @@ export async function getStudentStampbookAction(eventId: string, studentId: stri
       };
     });
 
-    // Sort descending by totalScans (or unique booths), then uniqueBoothCount, then class number and name
+    // Sort descending by completedCount (stamps), then totalScans (participation count), then class number and name
     leaderboardList.sort((a, b) => {
-      const metricA = isDoubleAllowed ? a.totalScans : a.completedCount;
-      const metricB = isDoubleAllowed ? b.totalScans : b.completedCount;
-      if (metricB !== metricA) {
-        return metricB - metricA;
+      // 1. 스탬프 개수 우선
+      if (b.completedCount !== a.completedCount) {
+        return b.completedCount - a.completedCount;
       }
-      if (b.uniqueBoothCount !== a.uniqueBoothCount) {
-        return b.uniqueBoothCount - a.uniqueBoothCount;
+      // 2. 부스 참여 횟수 우선
+      if (b.totalScans !== a.totalScans) {
+        return b.totalScans - a.totalScans;
       }
+      // 3. 반 번호 순 정렬
       return a.studentNumber.localeCompare(b.studentNumber, undefined, { numeric: true });
     });
 
-    // Assign Ranks (handling ties)
+    // Assign Ranks (동률 시 동일 순위 부여)
     let currentRank = 1;
-    let prevScore = -1;
+    let prevStamps = -1;
+    let prevScans = -1;
+
     const rankedLeaderboard: LeaderboardEntry[] = leaderboardList.map((item, idx) => {
-      const currentScore = isDoubleAllowed ? item.totalScans : item.completedCount;
-      if (currentScore !== prevScore) {
+      if (item.completedCount !== prevStamps || item.totalScans !== prevScans) {
         currentRank = idx + 1;
-        prevScore = currentScore;
+        prevStamps = item.completedCount;
+        prevScans = item.totalScans;
       }
       return {
         studentId: item.studentId,

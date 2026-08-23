@@ -559,17 +559,23 @@ export function StudentStampbookClientPage() {
                         )}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          {/* Rank tag */}
+                          {/* Rank tag / Medals */}
                           <span
                             className={cn(
-                              "flex h-5.5 w-5.5 items-center justify-center rounded-lg text-[10px] font-black",
-                              item.rank === 1 && "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300",
-                              item.rank === 2 && "bg-slate-100 text-slate-800 dark:bg-[#2C2C2E] dark:text-slate-200",
-                              item.rank === 3 && "bg-amber-50 text-amber-800 border border-amber-200 dark:bg-[#3A2E1C] dark:text-amber-500",
-                              item.rank > 3 && "bg-slate-100 dark:bg-[#121212] text-slate-500"
+                              "flex h-6 w-6 items-center justify-center rounded-lg font-black shrink-0",
+                              item.rank === 1 && "text-sm bg-amber-50 dark:bg-amber-950/40",
+                              item.rank === 2 && "text-sm bg-slate-100 dark:bg-[#2C2C2E]",
+                              item.rank === 3 && "text-sm bg-amber-50/50 dark:bg-[#3A2E1C]/60",
+                              item.rank > 3 && "bg-slate-100 dark:bg-[#121212] text-slate-500 text-[10px]"
                             )}
                           >
-                            {item.rank}
+                            {item.rank === 1
+                              ? "🥇"
+                              : item.rank === 2
+                              ? "🥈"
+                              : item.rank === 3
+                              ? "🥉"
+                              : item.rank}
                           </span>
                           
                           <div className="min-w-0">

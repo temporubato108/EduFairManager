@@ -12,6 +12,7 @@ export interface StudentInfo {
 export interface EventInfo {
   id: string;
   name: string;
+  allow_double_participation: boolean;
 }
 
 export interface StampbookBooth {
@@ -26,6 +27,7 @@ export interface LeaderboardEntry {
   name: string;
   studentNumber: string;
   completedCount: number;
+  uniqueBoothCount: number;
   rank: number;
 }
 
@@ -83,7 +85,7 @@ export async function getStudentStampbookAction(eventId: string, studentId: stri
     // 2. Fetch event details
     const { data: event, error: eError } = await supabase
       .from("events")
-      .select("id, name")
+      .select("id, name, allow_double_participation")
       .eq("id", eventId)
       .single();
 
@@ -94,6 +96,7 @@ export async function getStudentStampbookAction(eventId: string, studentId: stri
     const eventInfo: EventInfo = {
       id: event.id,
       name: event.name,
+      allow_double_participation: Boolean(event.allow_double_participation),
     };
 
     // 3. Fetch all active booths for this event with operator info
@@ -174,29 +177,40 @@ export async function getStudentStampbookAction(eventId: string, studentId: stri
 
     const allScans = (allParts || []) as unknown as ParticipationRow[];
 
-    // Compute unique completed booths count for each student
+    // Compute unique completed booths count and total scans for each student
     const studentCompletionCounts: Record<string, Set<string>> = {};
+    const studentTotalScans: Record<string, number> = {};
     studentList.forEach((s) => {
       studentCompletionCounts[s.id] = new Set<string>();
+      studentTotalScans[s.id] = 0;
     });
 
     allScans.forEach((p) => {
-      if (p.student_id && p.booth_id && studentCompletionCounts[p.student_id]) {
-        studentCompletionCounts[p.student_id].add(p.booth_id);
+      if (p.student_id && studentTotalScans[p.student_id] !== undefined) {
+        studentTotalScans[p.student_id]++;
+        if (p.booth_id) {
+          studentCompletionCounts[p.student_id].add(p.booth_id);
+        }
       }
     });
+
+    const isDoubleAllowed = Boolean(event.allow_double_participation);
 
     const leaderboardList = studentList.map((s) => ({
       studentId: s.id,
       name: s.name,
       studentNumber: s.studentNumber,
-      completedCount: studentCompletionCounts[s.id].size,
+      completedCount: isDoubleAllowed ? studentTotalScans[s.id] : studentCompletionCounts[s.id].size,
+      uniqueBoothCount: studentCompletionCounts[s.id].size,
     }));
 
     // Sort descending by count, then sort ascending by class number and name
     leaderboardList.sort((a, b) => {
       if (b.completedCount !== a.completedCount) {
         return b.completedCount - a.completedCount;
+      }
+      if (b.uniqueBoothCount !== a.uniqueBoothCount) {
+        return b.uniqueBoothCount - a.uniqueBoothCount;
       }
       return a.studentNumber.localeCompare(b.studentNumber, undefined, { numeric: true });
     });
@@ -214,6 +228,7 @@ export async function getStudentStampbookAction(eventId: string, studentId: stri
         name: item.name,
         studentNumber: item.studentNumber,
         completedCount: item.completedCount,
+        uniqueBoothCount: item.uniqueBoothCount,
         rank: currentRank,
       };
     });

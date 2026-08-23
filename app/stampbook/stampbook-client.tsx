@@ -589,6 +589,11 @@ export function StudentStampbookClientPage() {
                           <Award className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
                           <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">{item.completedCount}</span>
                           <span className="text-[9px] text-slate-500">개</span>
+                          {stampbook.event.allow_double_participation && (
+                            <span className="text-xs font-bold text-black dark:text-white ml-2 font-sans">
+                              부스 {item.uniqueBoothCount}개 참여
+                            </span>
+                          )}
                         </div>
                       </div>
                     );

@@ -147,36 +147,65 @@ export async function getStudentStampbookAction(eventId: string, studentId: stri
     // ----------------------------------------------------
     // Aggregation 5: Live Student Leaderboard
     // ----------------------------------------------------
-    // Fetch all active students in the event
-    const { data: allStudents, error: asError } = await supabase
-      .from("students")
-      .select("id, name, student_number")
-      .eq("event_id", eventId)
-      .is("deleted_at", null);
-
-    if (asError) throw new Error(asError.message);
-
+    // Fetch all active students in the event (with chunking for >1000 students)
     interface DBStudentRow {
       id: string;
       name: string;
       student_number: string;
     }
 
-    const studentList: StudentInfo[] = ((allStudents || []) as unknown as DBStudentRow[]).map((s) => ({
+    let fetchedStudents: DBStudentRow[] = [];
+    let sFrom = 0;
+    const sBatchSize = 1000;
+    let sHasMore = true;
+    while (sHasMore) {
+      const { data, error } = await supabase
+        .from("students")
+        .select("id, name, student_number")
+        .eq("event_id", eventId)
+        .is("deleted_at", null)
+        .order("student_number")
+        .range(sFrom, sFrom + sBatchSize - 1);
+
+      if (error) throw new Error(error.message);
+      if (data && data.length > 0) {
+        fetchedStudents = fetchedStudents.concat(data as unknown as DBStudentRow[]);
+        if (data.length < sBatchSize) sHasMore = false;
+        else sFrom += sBatchSize;
+      } else {
+        sHasMore = false;
+      }
+    }
+
+    const studentList: StudentInfo[] = fetchedStudents.map((s) => ({
       id: s.id,
       name: s.name,
       studentNumber: s.student_number,
     }));
 
-    // Fetch all participations in the event
-    const { data: allParts, error: apError } = await supabase
-      .from("participations")
-      .select("id, booth_id, student_id")
-      .eq("event_id", eventId);
+    // Fetch all participations in the event (with chunking for >1000 participations)
+    let fetchedParts: ParticipationRow[] = [];
+    let pFrom = 0;
+    const pBatchSize = 1000;
+    let pHasMore = true;
+    while (pHasMore) {
+      const { data, error } = await supabase
+        .from("participations")
+        .select("id, booth_id, student_id")
+        .eq("event_id", eventId)
+        .range(pFrom, pFrom + pBatchSize - 1);
 
-    if (apError) throw new Error(apError.message);
+      if (error) throw new Error(error.message);
+      if (data && data.length > 0) {
+        fetchedParts = fetchedParts.concat(data as unknown as ParticipationRow[]);
+        if (data.length < pBatchSize) pHasMore = false;
+        else pFrom += pBatchSize;
+      } else {
+        pHasMore = false;
+      }
+    }
 
-    const allScans = (allParts || []) as unknown as ParticipationRow[];
+    const allScans = fetchedParts;
 
     // Compute unique completed booths count and total scans for each student
     const studentCompletionCounts: Record<string, Set<string>> = {};

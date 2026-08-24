@@ -167,14 +167,32 @@ export async function recordParticipationAction(
     }
     targetStudent = studentData;
   } else {
-    // Case B: Direct student number (or name) input in the current event
-    const { data: allStudents, error: studentsError } = await supabase
-      .from("students")
-      .select("id, event_id, name, student_number")
-      .eq("event_id", eventId)
-      .is("deleted_at", null);
+    // Case B: Direct student number (or name) input in the current event (chunked for >1000 students)
+    let allStudents: { id: string; event_id: string; name: string; student_number: string }[] = [];
+    let sFrom = 0;
+    const sBatchSize = 1000;
+    let sHasMore = true;
 
-    if (studentsError || !allStudents || allStudents.length === 0) {
+    while (sHasMore) {
+      const { data, error: studentsError } = await supabase
+        .from("students")
+        .select("id, event_id, name, student_number")
+        .eq("event_id", eventId)
+        .is("deleted_at", null)
+        .range(sFrom, sFrom + sBatchSize - 1);
+
+      if (studentsError) throw new Error(studentsError.message);
+
+      if (data && data.length > 0) {
+        allStudents = allStudents.concat(data);
+        if (data.length < sBatchSize) sHasMore = false;
+        else sFrom += sBatchSize;
+      } else {
+        sHasMore = false;
+      }
+    }
+
+    if (allStudents.length === 0) {
       return { error: "해당 행사에 등록된 학생이 없습니다." };
     }
 

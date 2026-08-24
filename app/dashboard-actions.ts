@@ -69,15 +69,35 @@ export async function getAdminDashboardDataAction(eventId: string) {
 
     if (tsError) throw new Error(tsError.message);
 
-    // 2. Fetch all participations with scanned_at to aggregate statistics
-    const { data: participations, error: pError } = await supabase
-      .from("participations")
-      .select("id, scanned_at, booth_id, student_id, booth:booths(name, description, operator:teachers(name)), student:students(name, student_number)")
-      .eq("event_id", eventId);
+    // 2. Fetch all participations in chunks to bypass Supabase 1000-row cap
+    let allParticipations: ParticipationRow[] = [];
+    let pFrom = 0;
+    const pBatchSize = 1000;
+    let pHasMore = true;
 
-    if (pError) throw new Error(pError.message);
+    while (pHasMore) {
+      const { data, error } = await supabase
+        .from("participations")
+        .select("id, scanned_at, created_at, booth_id, student_id, booth:booths(name, description, operator:teachers(name)), student:students(name, student_number)")
+        .eq("event_id", eventId)
+        .order("created_at", { ascending: false })
+        .range(pFrom, pFrom + pBatchSize - 1);
 
-    const rows = (participations || []) as unknown as ParticipationRow[];
+      if (error) throw new Error(error.message);
+
+      if (data && data.length > 0) {
+        allParticipations = allParticipations.concat(data as unknown as ParticipationRow[]);
+        if (data.length < pBatchSize) {
+          pHasMore = false;
+        } else {
+          pFrom += pBatchSize;
+        }
+      } else {
+        pHasMore = false;
+      }
+    }
+
+    const rows = allParticipations;
     const totalPCount = rows.length;
 
     // 3. Compute unique participated students count

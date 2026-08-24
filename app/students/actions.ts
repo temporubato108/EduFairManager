@@ -127,17 +127,33 @@ function parseStudentNumber(numStr: string): ParsedStudentNumber {
  */
 export async function getStudentsAction(eventId: string): Promise<Student[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("students")
-    .select("*")
-    .eq("event_id", eventId)
-    .is("deleted_at", null);
+  let allStudents: Student[] = [];
+  let sFrom = 0;
+  const sBatchSize = 1000;
+  let sHasMore = true;
 
-  if (error) {
-    throw new Error(error.message);
+  while (sHasMore) {
+    const { data, error } = await supabase
+      .from("students")
+      .select("*")
+      .eq("event_id", eventId)
+      .is("deleted_at", null)
+      .range(sFrom, sFrom + sBatchSize - 1);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (data && data.length > 0) {
+      allStudents = allStudents.concat(data as unknown as Student[]);
+      if (data.length < sBatchSize) sHasMore = false;
+      else sFrom += sBatchSize;
+    } else {
+      sHasMore = false;
+    }
   }
 
-  const students = (data || []).sort((a, b) => {
+  const students = allStudents.sort((a, b) => {
     const pA = parseStudentNumber(a.student_number);
     const pB = parseStudentNumber(b.student_number);
 

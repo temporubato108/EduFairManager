@@ -93,26 +93,56 @@ export async function getStatisticsDataAction(eventId: string) {
 
     if (bError) throw new Error(bError.message);
 
-    // 2. Fetch active students
-    const { data: students, error: sError } = await supabase
-      .from("students")
-      .select("id, name, student_number")
-      .eq("event_id", eventId)
-      .is("deleted_at", null);
+    // 2. Fetch all active students in chunks (supports >1000 students)
+    let allStudents: { id: string; name: string; student_number: string }[] = [];
+    let sFrom = 0;
+    const sBatchSize = 1000;
+    let sHasMore = true;
+    while (sHasMore) {
+      const { data, error } = await supabase
+        .from("students")
+        .select("id, name, student_number")
+        .eq("event_id", eventId)
+        .is("deleted_at", null)
+        .order("student_number")
+        .range(sFrom, sFrom + sBatchSize - 1);
 
-    if (sError) throw new Error(sError.message);
+      if (error) throw new Error(error.message);
+      if (data && data.length > 0) {
+        allStudents = allStudents.concat(data);
+        if (data.length < sBatchSize) sHasMore = false;
+        else sFrom += sBatchSize;
+      } else {
+        sHasMore = false;
+      }
+    }
 
-    // 3. Fetch all participations
-    const { data: participations, error: pError } = await supabase
-      .from("participations")
-      .select("id, scanned_at, booth_id, student_id, booth:booths(name, operator:teachers(name)), student:students(name, student_number)")
-      .eq("event_id", eventId);
+    // 3. Fetch all participations in chunks (supports >1000 participations)
+    let allParticipations: ParticipationRow[] = [];
+    let pFrom = 0;
+    const pBatchSize = 1000;
+    let pHasMore = true;
+    while (pHasMore) {
+      const { data, error } = await supabase
+        .from("participations")
+        .select("id, scanned_at, created_at, booth_id, student_id, booth:booths(name, operator:teachers(name)), student:students(name, student_number)")
+        .eq("event_id", eventId)
+        .order("created_at", { ascending: false })
+        .range(pFrom, pFrom + pBatchSize - 1);
 
-    if (pError) throw new Error(pError.message);
+      if (error) throw new Error(error.message);
+      if (data && data.length > 0) {
+        allParticipations = allParticipations.concat(data as unknown as ParticipationRow[]);
+        if (data.length < pBatchSize) pHasMore = false;
+        else pFrom += pBatchSize;
+      } else {
+        pHasMore = false;
+      }
+    }
 
-    const activeStudents = students || [];
+    const activeStudents = allStudents;
     const activeBooths = booths || [];
-    const rows = (participations || []) as unknown as ParticipationRow[];
+    const rows = allParticipations;
 
     // ----------------------------------------------------
     // Aggregation 1: Booth Stats

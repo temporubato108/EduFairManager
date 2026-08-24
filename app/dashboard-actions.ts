@@ -78,9 +78,9 @@ export async function getAdminDashboardDataAction(eventId: string) {
     while (pHasMore) {
       const { data, error } = await supabase
         .from("participations")
-        .select("id, scanned_at, created_at, booth_id, student_id, booth:booths(name, description, operator:teachers(name)), student:students(name, student_number)")
+        .select("id, scanned_at, booth_id, student_id, booth:booths(name, description, operator:teachers(name)), student:students(name, student_number)")
         .eq("event_id", eventId)
-        .order("created_at", { ascending: false })
+        .order("scanned_at", { ascending: false })
         .range(pFrom, pFrom + pBatchSize - 1);
 
       if (error) throw new Error(error.message);

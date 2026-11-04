@@ -21,10 +21,12 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Sparkles,
 } from "lucide-react";
 import { getStudentStampbookAction, StudentStampbookData } from "./actions";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
+import { CertificateModal } from "@/components/CertificateModal";
 
 function getPageNumbers(current: number, total: number): (number | string)[] {
   if (total <= 7) {
@@ -79,6 +81,7 @@ export function StudentStampbookClientPage() {
   const [activeTab, setActiveTab] = useState<"stamps" | "leaderboard">("stamps");
   const [leaderboardPage, setLeaderboardPage] = useState(1);
   const [inputCode, setInputCode] = useState("");
+  const [certModalOpen, setCertModalOpen] = useState(false);
 
   const LEADERBOARD_PAGE_SIZE = 10;
 
@@ -429,6 +432,20 @@ export function StudentStampbookClientPage() {
                 ></div>
               </div>
             </div>
+
+            {/* Certificate Trigger Button (Shows when completed at least 3 booths or all) */}
+            {completedCount >= Math.min(3, Math.max(1, totalBooths)) && (
+              <div className="pt-3 border-t border-slate-100 dark:border-[#2C2C2E]/60">
+                <Button
+                  onClick={() => setCertModalOpen(true)}
+                  className="w-full bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black rounded-xl h-11 text-xs gap-2 shadow-md shadow-amber-500/20 animate-in fade-in zoom-in-95 duration-300"
+                >
+                  <Award className="h-4 w-4 text-slate-950" />
+                  <span>🎓 디지털 축제 완주 인증서 열기</span>
+                  <Sparkles className="h-3.5 w-3.5 ml-auto text-amber-200" />
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -684,6 +701,17 @@ export function StudentStampbookClientPage() {
         })()}
 
       </main>
+
+      {/* Certificate Modal */}
+      <CertificateModal
+        open={certModalOpen}
+        onOpenChange={setCertModalOpen}
+        studentName={stampbook.student.name}
+        studentNumber={stampbook.student.studentNumber}
+        eventName={stampbook.event.name}
+        completedCount={completedCount}
+        totalBooths={totalBooths}
+      />
     </div>
   );
 }

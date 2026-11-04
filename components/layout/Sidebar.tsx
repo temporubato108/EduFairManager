@@ -206,10 +206,16 @@ export function Sidebar({ onClose }: SidebarProps) {
       </div>
 
       {/* Sidebar Footer */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-center">
+      <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-center space-y-1">
         <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
           EduFair Manager v1.0.0
         </p>
+        <Link
+          href="/privacy"
+          className="text-[10px] text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors underline underline-offset-2 block"
+        >
+          개인정보 처리방침
+        </Link>
       </div>
     </aside>
   );

@@ -218,6 +218,16 @@ export function SignupClientPage() {
             </div>
           </form>
         </CardContent>
+
+        {/* Legal Link */}
+        <div className="px-6 py-3 bg-slate-50/50 dark:bg-[#181818] border-t border-slate-100 dark:border-[#2C2C2E]/60 text-center">
+          <Link
+            href="/privacy"
+            className="text-[11px] font-medium text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors inline-flex items-center gap-1"
+          >
+            <span>개인정보 처리방침</span>
+          </Link>
+        </div>
       </Card>
     </div>
   );

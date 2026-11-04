@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, User, Menu, LogOut, Loader2 } from "lucide-react";
+import { Calendar, User, Menu, LogOut, Loader2, BookOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { useTransition } from "react";
 import { logoutAction } from "@/app/login/actions";
 import { supabase } from "@/lib/supabase/client";
+import { GuideModal } from "@/components/GuideModal";
 
 import { setCachedUser, clearClientCache } from "@/lib/cache";
 import { extractUsername } from "@/lib/auth-helpers";
@@ -19,6 +20,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const [isPending, startTransition] = useTransition();
   const [userName, setUserName] = useState("관리자");
   const [role, setRole] = useState("학교 관리자");
+  const [guideOpen, setGuideOpen] = useState(false);
 
   useEffect(() => {
     async function loadUser() {
@@ -89,7 +91,19 @@ export function Header({ onMenuClick }: HeaderProps) {
         </div>
 
         {/* Right Side: Profile Info & Theme Toggle */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Guide Modal Trigger */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setGuideOpen(true)}
+            className="border-indigo-200 dark:border-indigo-800/80 bg-indigo-50/60 hover:bg-indigo-100/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-bold text-xs gap-1.5 h-8 px-2.5 shadow-2xs"
+            title="실전 사용 가이드"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span className="hidden sm:inline">사용 가이드</span>
+          </Button>
+
           <div className="flex items-center gap-2 rounded-full border border-slate-100 bg-slate-50/50 py-1 pl-2 pr-3 text-xs dark:border-slate-800 dark:bg-slate-900/50">
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
               <User className="h-3.5 w-3.5" />
@@ -122,6 +136,9 @@ export function Header({ onMenuClick }: HeaderProps) {
           </Button>
         </div>
       </div>
+
+      {/* Guide Modal */}
+      <GuideModal open={guideOpen} onOpenChange={setGuideOpen} />
     </header>
   );
 }

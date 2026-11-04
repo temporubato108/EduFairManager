@@ -54,6 +54,7 @@ import {
   deleteEventAction,
   duplicateEventAction,
   saveAsTemplateAction,
+  createSampleEventAction,
 } from "./actions";
 import { cn } from "@/lib/utils";
 
@@ -271,6 +272,21 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
     });
   };
 
+  // Handle Create Sample Event
+  const handleCreateSample = () => {
+    if (!confirm("부스 6개와 가상 학생 10명이 포함된 '2026 에듀페어 체험전(샘플)'을 생성하시겠습니까?\n생성 후 부스 QR 인쇄와 스캐너를 바로 테스트해 보실 수 있습니다.")) return;
+
+    startTransition(async () => {
+      const res = await createSampleEventAction();
+      if (res.error) {
+        alert(`샘플 행사 생성 실패: ${res.error}`);
+      } else {
+        alert("🎉 샘플 행사가 성공적으로 생성되었습니다!\n[부스 관리]와 [학생 관리]에서 바로 확인하실 수 있습니다.");
+        setActiveTab("active");
+      }
+    });
+  };
+
   // Filter events by tab selection
   const filteredEvents = events.filter((e) =>
     activeTab === "template" ? e.is_template : !e.is_template
@@ -287,16 +303,27 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
               학교 행사 및 템플릿을 등록하고 제어합니다.
             </p>
           </div>
-          <Button
-            onClick={() => {
-              resetCreateForm();
-              setIsCreateOpen(true);
-            }}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            <span>새 행사 등록</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleCreateSample}
+              disabled={isPending}
+              variant="outline"
+              className="border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-semibold gap-1.5 transition-colors shadow-xs"
+            >
+              <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              <span>샘플 행사 1초 생성</span>
+            </Button>
+            <Button
+              onClick={() => {
+                resetCreateForm();
+                setIsCreateOpen(true);
+              }}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white font-semibold gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>새 행사 등록</span>
+            </Button>
+          </div>
         </div>
 
         {/* Tab Buttons */}
@@ -329,9 +356,39 @@ export function EventClientPage({ initialEvents }: EventClientPageProps) {
         <Card className="border-slate-200 dark:border-[#2C2C2E] bg-white dark:bg-[#1E1E1E]">
           <CardContent className="p-0">
             {filteredEvents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-[#98989D]">
-                <Calendar className="h-10 w-10 text-slate-300 dark:text-[#2C2C2E] mb-3" />
-                <p className="text-sm">등록된 행사가 없습니다.</p>
+              <div className="flex flex-col items-center justify-center py-14 px-4 text-center space-y-4 text-slate-500 dark:text-[#98989D]">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-xs">
+                  <Calendar className="h-6 w-6" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">등록된 행사가 아직 없습니다.</p>
+                  <p className="text-xs text-slate-400 max-w-sm">
+                    새 행사를 등록하거나, 6개 부스와 10명의 가상 학생이 채워진 샘플 행사를 1초 만에 만들어 즉시 체험해 보세요!
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                  <Button
+                    onClick={handleCreateSample}
+                    disabled={isPending}
+                    size="sm"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-1.5 shadow-sm"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>🚀 샘플 행사 1초 생성하기</span>
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      resetCreateForm();
+                      setIsCreateOpen(true);
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="border-slate-200 dark:border-[#2C2C2E]"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>직접 새 행사 만들기</span>
+                  </Button>
+                </div>
               </div>
             ) : (
               <Table>

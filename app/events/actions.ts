@@ -382,3 +382,98 @@ export async function saveAsTemplateAction(id: string, templateName: string) {
   revalidatePath("/events");
   return { success: true, data: templateEvent };
 }
+
+/**
+ * Generate a complete, ready-to-test sample event with 6 booths and 10 students
+ */
+export async function createSampleEventAction() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "로그인이 필요합니다." };
+  }
+
+  const adminSupabase = createAdminClient();
+  const today = new Date().toISOString().split("T")[0];
+
+  // 1. Create sample event
+  const eventDesc = `<!--owner:${user.id}--><!--end_date:${today}-->에듀페어 매니저 기능 테스트 및 시연을 위해 자동 생성된 표준 샘플 행사입니다.`;
+  const { data: sampleEvent, error: eventError } = await adminSupabase
+    .from("events")
+    .insert([
+      {
+        name: "2026 에듀페어 체험전 (샘플)",
+        description: eventDesc,
+        date: today,
+        status: "progress",
+        allow_double_participation: true,
+        is_template: false,
+      },
+    ])
+    .select()
+    .single();
+
+  if (eventError || !sampleEvent) {
+    return { error: `샘플 행사 생성 실패: ${eventError?.message || "알 수 없는 오류"}` };
+  }
+
+  // 2. Insert 6 popular booths
+  const sampleBooths = [
+    {
+      event_id: sampleEvent.id,
+      name: "🚁 드론 정밀 조종 챌린지",
+      description: "<!--operator:정보부장-->장애물 링을 통과하여 정밀 착륙 지점에 안착하는 비행 미션",
+    },
+    {
+      event_id: sampleEvent.id,
+      name: "🤖 인공지능 로봇 코딩 체험",
+      description: "<!--operator:수학선생님-->블록 코딩으로 자율주행 알고리즘을 설계하고 라인트레이서 레이싱 대결",
+    },
+    {
+      event_id: sampleEvent.id,
+      name: "🎨 3D 펜 나만의 키링 공작소",
+      description: "<!--operator:미술선생님-->친환경 PLA 필라멘트를 이용해 나만의 캐릭터 입체 키링 제작",
+    },
+    {
+      event_id: sampleEvent.id,
+      name: "🥽 VR 우주 탐사 가상현실 어트랙션",
+      description: "<!--operator:과학선생님-->HMD 가상현실 장비를 착용하고 우주정거장과 달 표면 탐사",
+    },
+    {
+      event_id: sampleEvent.id,
+      name: "🧪 신비한 화학 반응 실험실",
+      description: "<!--operator:물리선생님-->드라이아이스 안개 대포와 자외선 형광 슬라임 만들기 반응 체험",
+    },
+    {
+      event_id: sampleEvent.id,
+      name: "🎭 페이스 페인팅 & 캐리커처",
+      description: "<!--operator:동아리회장-->축제 기분을 만끽하는 캐릭터 페이스 페인팅 및 1분 크로키 캐리커처",
+    },
+  ];
+
+  await adminSupabase.from("booths").insert(sampleBooths);
+
+  // 3. Insert 10 sample students
+  const sampleStudents = [
+    { event_id: sampleEvent.id, student_number: "1-1-1", name: "김체험" },
+    { event_id: sampleEvent.id, student_number: "1-1-2", name: "이디지털" },
+    { event_id: sampleEvent.id, student_number: "1-1-3", name: "박드론" },
+    { event_id: sampleEvent.id, student_number: "1-2-1", name: "최코딩" },
+    { event_id: sampleEvent.id, student_number: "1-2-2", name: "정로봇" },
+    { event_id: sampleEvent.id, student_number: "2-1-1", name: "강메타" },
+    { event_id: sampleEvent.id, student_number: "2-1-2", name: "조가상" },
+    { event_id: sampleEvent.id, student_number: "2-2-1", name: "윤인공" },
+    { event_id: sampleEvent.id, student_number: "3-1-1", name: "장지능" },
+    { event_id: sampleEvent.id, student_number: "3-1-2", name: "한미래" },
+  ];
+
+  await adminSupabase.from("students").insert(sampleStudents);
+
+  const { recordLogAction } = await import("@/app/logs/actions");
+  await recordLogAction(sampleEvent.id, "create_event", "원클릭 샘플 행사 자동 생성 (부스 6개, 학생 10명 등록)");
+
+  revalidatePath("/events");
+  revalidatePath("/booths");
+  revalidatePath("/students");
+  return { success: true, data: sampleEvent };
+}
